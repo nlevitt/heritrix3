@@ -450,6 +450,7 @@ public abstract class FetchHTTPTestBase extends ProcessorTestBase {
         ensureHttpServers();
         CrawlURI curi = makeCrawlURI("http://localhost:7777/");
         getFetcher().process(curi);
+        // logger.info('\n' + httpRequestString(curi) + "\n\n" + rawResponseString(curi));
         runDefaultChecks(curi);
     }
 
@@ -975,5 +976,20 @@ public abstract class FetchHTTPTestBase extends ProcessorTestBase {
         assertEquals("25\r\n" + DEFAULT_PAYLOAD_STRING + "\r\n0\r\n\r\n", messageBodyString(curi));
         assertEquals(DEFAULT_PAYLOAD_STRING, entityString(curi));
         assertEquals(DEFAULT_PAYLOAD_STRING, contentString(curi));
+    }
+    
+    /**
+     * Tests a URL not correctly url-encoded, but that heritrix lets pass
+     * through to mimic browser behavior. {@link java.net.URI} would reject this
+     * url. See class comment on {@link UURI}.
+     * 
+     * @throws Exception
+     */
+    public void testLaxUrlEncoding() throws Exception {
+        CrawlURI curi = makeCrawlURI("http://localhost:7777/99%");
+        getFetcher().process(curi);
+        // logger.info('\n' + httpRequestString(curi) + "\n\n" + rawResponseString(curi));
+        assertTrue(httpRequestString(curi).startsWith("GET /99% HTTP/1.0\r\n"));
+        runDefaultChecks(curi, "requestLine");
     }
 }
