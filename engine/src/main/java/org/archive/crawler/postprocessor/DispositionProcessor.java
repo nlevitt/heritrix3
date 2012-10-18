@@ -222,17 +222,19 @@ public class DispositionProcessor extends Processor {
         
         Object unresolvedUri = curi.getData().get("unresolvedUri");
         if (unresolvedUri != null) {
-            specialLog().info(curi.getFetchStatus() + " " + unresolvedUri + " " + curi.getURI());
+            specialLog.info(curi.getFetchStatus() + " " + unresolvedUri + " " + curi.getURI());
         }
     }
     
-    protected Logger specialLog = null;
-    protected Logger specialLog() {
+    @Override
+    public void start() {
+        super.start();
         if (specialLog == null) {
             specialLog = loggerModule.setupSimpleLog("specialLog");
         }
-        return specialLog;
     }
+    protected Logger specialLog = null;
+
     protected SimpleFileLoggerProvider loggerModule;
     public SimpleFileLoggerProvider getLoggerModule() {
         return this.loggerModule;
