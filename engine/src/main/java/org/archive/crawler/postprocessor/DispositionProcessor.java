@@ -226,12 +226,12 @@ public class DispositionProcessor extends Processor {
         }
     }
     
-    protected Logger unresolvedUriLogger = null;
+    protected Logger specialLog = null;
     protected Logger specialLog() {
-        if (unresolvedUriLogger == null) {
-            unresolvedUriLogger = loggerModule.setupSimpleLog("specialLog");
+        if (specialLog == null) {
+            specialLog = loggerModule.setupSimpleLog("specialLog");
         }
-        return unresolvedUriLogger;
+        return specialLog;
     }
     protected SimpleFileLoggerProvider loggerModule;
     public SimpleFileLoggerProvider getLoggerModule() {

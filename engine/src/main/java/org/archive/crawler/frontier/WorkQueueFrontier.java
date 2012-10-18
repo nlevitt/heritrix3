@@ -410,9 +410,6 @@ implements Closeable,
         doJournalAdded(curi);
         wq.makeDirty();
         largestQueues.update(wq.getClassKey(), wq.getCount());
-        if (!curi.getData().isEmpty()) {
-            logger.info("when added to frontier curi.getData()=" + curi.getData());
-        }
     }
 
     /**

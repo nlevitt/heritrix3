@@ -131,8 +131,7 @@ implements Reporter, ProgressStatisticsReporter,
                 setStep(Step.ABOUT_TO_GET_URI, null);
 
                 CrawlURI curi = controller.getFrontier().next();
-                logger.info("when retrieved from frontier curi.getData()=" + curi.getData());
-
+                
                 
                 synchronized(this) {
                     ArchiveUtils.continueCheck();
