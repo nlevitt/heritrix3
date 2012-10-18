@@ -219,10 +219,12 @@ public class DispositionProcessor extends Processor {
         
         // TODO: set other disposition decisions
         // success, failure, retry(retry-delay)
-        
-        Object unresolvedUri = curi.getData().get("unresolvedUri");
-        if (unresolvedUri != null) {
-            specialLog.info(curi.getFetchStatus() + " " + unresolvedUri + " " + curi.getURI());
+
+        if (curi.getFetchStatus() != S_DEFERRED) {
+            Object unresolvedUri = curi.getData().get("unresolvedUri");
+            if (unresolvedUri != null) {
+                specialLog.info(curi.getFetchStatus() + " " + unresolvedUri + " " + curi.getURI());
+            }
         }
     }
     
