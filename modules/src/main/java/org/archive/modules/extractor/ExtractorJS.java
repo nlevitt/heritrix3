@@ -169,13 +169,15 @@ public class ExtractorJS extends ContentExtractor {
                 foundLinks++;
                 try {
                     int max = ext.getExtractorParameters().getMaxOutlinks();
+                    Link link;
                     if (handlingJSFile) {
-                        Link.addRelativeToVia(curi, max, string, JS_MISC, 
+                        link = Link.addRelativeToVia(curi, max, string, JS_MISC, 
                                 SPECULATIVE);
                     } else {
-                        Link.addRelativeToBase(curi, max, string, JS_MISC, 
+                        link = Link.addRelativeToBase(curi, max, string, JS_MISC, 
                                 SPECULATIVE);
                     }
+                    link.setUnresolvedUri(string);
                 } catch (URIException e) {
                     ext.logUriError(e, curi.getUURI(), string);
                 }

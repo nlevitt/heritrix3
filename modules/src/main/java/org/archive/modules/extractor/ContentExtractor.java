@@ -55,7 +55,7 @@ public abstract class ContentExtractor extends Extractor {
      * this method returns false.
      * 
      * <p>
-     * Finally, this method delegates to {@link #innerExtract(ExtractorURI)} and
+     * Finally, this method delegates to {@link #shouldExtract(CrawlURI)} and
      * returns that result.
      * 
      * @param uri

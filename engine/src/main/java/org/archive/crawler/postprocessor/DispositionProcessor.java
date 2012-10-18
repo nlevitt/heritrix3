@@ -34,6 +34,7 @@ import org.apache.commons.httpclient.URIException;
 import org.archive.modules.CrawlMetadata;
 import org.archive.modules.CrawlURI;
 import org.archive.modules.Processor;
+import org.archive.modules.SimpleFileLoggerProvider;
 import org.archive.modules.net.CrawlHost;
 import org.archive.modules.net.CrawlServer;
 import org.archive.modules.net.IgnoreRobotsPolicy;
@@ -218,8 +219,29 @@ public class DispositionProcessor extends Processor {
         
         // TODO: set other disposition decisions
         // success, failure, retry(retry-delay)
+        
+        Object unresolvedUri = curi.getData().get("unresolvedUri");
+        if (unresolvedUri != null) {
+            specialLog().info(curi.getFetchStatus() + " " + unresolvedUri + " " + curi.getURI());
+        }
     }
     
+    protected Logger unresolvedUriLogger = null;
+    protected Logger specialLog() {
+        if (unresolvedUriLogger == null) {
+            unresolvedUriLogger = loggerModule.setupSimpleLog("specialLog");
+        }
+        return unresolvedUriLogger;
+    }
+    protected SimpleFileLoggerProvider loggerModule;
+    public SimpleFileLoggerProvider getLoggerModule() {
+        return this.loggerModule;
+    }
+    @Autowired
+    public void setLoggerModule(SimpleFileLoggerProvider loggerModule) {
+        this.loggerModule = loggerModule;
+    }
+
     /**
      * Update any scheduling structures with the new information in this
      * CrawlURI. Chiefly means make necessary arrangements for no other URIs at

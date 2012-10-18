@@ -126,14 +126,14 @@ public class Link implements Serializable, Comparable<Link> {
          ^ context.hashCode() ^ hop.hashCode();
     }
 
-    public static void addRelativeToBase(CrawlURI uri, int max, 
+    public static Link addRelativeToBase(CrawlURI uri, int max, 
             String newUri, LinkContext context, Hop hop) throws URIException {
         UURI dest = UURIFactory.getInstance(uri.getBaseURI(), newUri);
-        add2(uri, max, dest, context, hop);
+        return add2(uri, max, dest, context, hop);
     }
 
     
-    public static void addRelativeToVia(CrawlURI uri, int max, String newUri,
+    public static Link addRelativeToVia(CrawlURI uri, int max, String newUri,
             LinkContext context, Hop hop) throws URIException {
         UURI relTo = uri.getVia();
         if (relTo == null) {
@@ -144,25 +144,26 @@ public class Link implements Serializable, Comparable<Link> {
             relTo = uri.getBaseURI();
         }
         UURI dest = UURIFactory.getInstance(relTo, newUri);
-        add2(uri, max, dest, context, hop);
+        return add2(uri, max, dest, context, hop);
     }
 
-    public static void add(CrawlURI uri, int max, String newUri, 
+    public static Link add(CrawlURI uri, int max, String newUri, 
             LinkContext context, Hop hop) throws URIException {
         UURI dest = UURIFactory.getInstance(newUri);
-        add2(uri, max, dest, context, hop);
+        return add2(uri, max, dest, context, hop);
     }
 
 
-    private static void add2(CrawlURI uri, int max, UURI dest, 
+    private static Link add2(CrawlURI uri, int max, UURI dest, 
             LinkContext context, Hop hop) throws URIException {
         if (uri.getOutLinks().size() < max) {
             UURI src = uri.getUURI();
             Link link = new Link(src, dest, context, hop);
             uri.getOutLinks().add(link);
-//            return link;
+            return link;
         } else {
             uri.incrementDiscardedOutLinks();
+            return null;
         }
     }
 
@@ -178,6 +179,15 @@ public class Link implements Serializable, Comparable<Link> {
             cmp = hop.toString().compareTo(o.hop.toString());
         }
         return cmp;
+    }
+
+
+    protected String unresolvedUri;
+    public void setUnresolvedUri(String newUri) {
+        unresolvedUri = newUri;
+    }
+    public String getUnresolvedUri() {
+        return unresolvedUri;
     }
 
 }

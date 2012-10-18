@@ -23,6 +23,8 @@ package org.archive.crawler.postprocessor;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_DEFERRED;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_PREREQUISITE_UNSCHEDULABLE_FAILURE;
 
+import java.util.logging.Logger;
+
 import org.apache.commons.httpclient.URIException;
 import org.archive.crawler.framework.Frontier;
 import org.archive.crawler.reporting.CrawlerLoggerModule;
@@ -202,7 +204,13 @@ public class CandidatesProcessor extends Processor {
                         && candidate.getHopCount() < SEEDS_REDIRECT_NEW_SEEDS_MAX_HOPS) {
                     candidate.setSeed(true); 
                 }
-                getCandidateChain().process(candidate, null); 
+                getCandidateChain().process(candidate, null);
+
+                if (wref.getUnresolvedUri() != null) {
+                    LOGGER.info(wref.getUnresolvedUri() + " => " + candidate.getURI());
+                    candidate.getData().put("unresolvedUri", wref.getUnresolvedUri());
+                }
+
                 if(candidate.getFetchStatus()>=0) {
                     if(checkForSeedPromotion(candidate)) {
                         /*
@@ -216,6 +224,7 @@ public class CandidatesProcessor extends Processor {
                     } else {
                         frontier.schedule(candidate);
                     }
+                    
                     curi.getOutCandidates().add(candidate);
                 }
                 
@@ -226,7 +235,8 @@ public class CandidatesProcessor extends Processor {
         }
         curi.getOutLinks().clear();
     }
-    
+    private static final Logger LOGGER = Logger.getLogger(CandidatesProcessor.class.getName());
+
     /**
      * Check if the URI needs special 'discovered seed' treatment.
      * 
