@@ -472,7 +472,7 @@ public interface Frontier extends Lifecycle, Reporter {
      */
     public String getClassKey(CrawlURI cauri);
 
-    /*
+    /**
      * Return the internally-configured crawl 'scope' (rules for
      * deciding whether a URI is crawled or not). 
      */
