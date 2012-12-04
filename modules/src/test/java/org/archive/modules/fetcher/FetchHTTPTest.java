@@ -1059,6 +1059,25 @@ public class FetchHTTPTest extends ProcessorTestBase {
         noResponseServer.join();
     }
     
+    /**
+     * Tests a URL not correctly url-encoded, but that heritrix lets pass
+     * through to mimic browser behavior. {@link java.net.URI} would reject this
+     * url. See class comment on {@link UURI}.
+     * 
+     * @throws Exception
+     */
+    public void testLaxUrlEncoding() throws Exception {
+        CrawlURI curi = makeCrawlURI("http://localhost:7777/99%");
+        fetcher().process(curi);
+        // logger.info('\n' + httpRequestString(curi) + "\n\n" + rawResponseString(curi));
+        assertTrue(httpRequestString(curi).startsWith("GET /99% HTTP/1.0\r\n"));
+        runDefaultChecks(curi, "requestLine");
+        
+        // XXX this works... should we just use HttpURLConnection?
+        // java.net.URL url = new java.net.URL("http://localhost:7777/99%");
+        // assertEquals("http://localhost:7777/99%", url.toString());
+    }
+
     @Override
     protected FetchHTTPHttpCore makeModule() throws IOException {
         FetchHTTPHttpCore fetchHttp = newTestFetchHttp(getUserAgentString());
