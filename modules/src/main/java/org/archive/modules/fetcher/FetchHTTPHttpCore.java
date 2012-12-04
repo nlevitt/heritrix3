@@ -53,7 +53,6 @@ import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
 import org.archive.io.RecorderLengthExceededException;
 import org.archive.io.RecorderTimeoutException;
 import org.archive.modules.CrawlURI;
-import org.archive.modules.Processor;
 import org.archive.modules.credential.Credential;
 import org.archive.modules.credential.CredentialStore;
 import org.archive.modules.credential.HttpAuthenticationCredential;
@@ -71,7 +70,7 @@ import org.springframework.context.Lifecycle;
  * HTTP fetcher that uses <a href="http://hc.apache.org/">Apache HttpCore</a>.
  * @contributor nlevitt
  */
-public class FetchHTTPHttpCore extends Processor implements Lifecycle {
+public class FetchHTTPHttpCore extends FetchHTTPBase implements Lifecycle {
 
     private static Logger logger = Logger.getLogger(FetchHTTPHttpCore.class.getName());
 

@@ -19,29 +19,19 @@
 package org.archive.modules.fetcher;
 
 import static org.archive.modules.CrawlURI.FetchType.HTTP_POST;
-import static org.archive.modules.fetcher.FetchErrors.LENGTH_TRUNC;
-import static org.archive.modules.fetcher.FetchErrors.TIMER_TRUNC;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_CONNECT_FAILED;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_CONNECT_LOST;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_DOMAIN_PREREQUISITE_FAILURE;
-import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_ETAG_HEADER;
-import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_LAST_MODIFIED_HEADER;
 import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_REFERENCE_LENGTH;
-import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_STATUS;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,51 +42,23 @@ import javax.net.ssl.TrustManager;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.HttpVersion;
-import org.apache.http.NameValuePair;
-import org.apache.http.auth.AuthScheme;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.MalformedChallengeException;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.AuthCache;
-import org.apache.http.client.AuthenticationStrategy;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.params.CookiePolicy;
-import org.apache.http.client.params.HttpClientParams;
-import org.apache.http.client.protocol.ClientContext;
-import org.apache.http.client.utils.URIUtils;
-import org.apache.http.conn.params.ConnRouteParams;
 import org.apache.http.entity.ContentType;
-import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpProtocolParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HTTP;
-import org.apache.http.protocol.HttpContext;
 import org.archive.httpclient.ConfigurableX509TrustManager;
 import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
 import org.archive.io.RecorderLengthExceededException;
 import org.archive.io.RecorderTimeoutException;
 import org.archive.modules.CrawlURI;
-import org.archive.modules.CrawlURI.FetchType;
 import org.archive.modules.credential.Credential;
 import org.archive.modules.credential.CredentialStore;
-import org.archive.modules.credential.HtmlFormCredential;
 import org.archive.modules.credential.HttpAuthenticationCredential;
 import org.archive.modules.deciderules.AcceptDecideRule;
 import org.archive.modules.deciderules.DecideResult;
 import org.archive.modules.deciderules.DecideRule;
-import org.archive.modules.extractor.LinkContext;
 import org.archive.modules.net.CrawlHost;
 import org.archive.modules.net.CrawlServer;
 import org.archive.modules.net.ServerCache;
@@ -105,12 +67,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.Lifecycle;
 
 /**
- * HTTP fetcher that uses <a href="http://hc.apache.org/">Apache HttpComponents</a>.
+ * HTTP fetcher that uses <a href="http://hc.apache.org/">Apache HttpCore</a>.
  * @contributor nlevitt
  */
-public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
+public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
 
-    private static Logger logger = Logger.getLogger(FetchHTTP.class.getName());
+    private static Logger logger = Logger.getLogger(FetchHTTPJavaNetURL.class.getName());
 
     public static final String REFERER = "Referer";
     public static final String RANGE = "Range";
@@ -406,8 +368,8 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
      * Maximum length in bytes to fetch. Fetch is truncated at this length. A
      * value of 0 means no limit.
      */
-    public void setMaxLengthBytes(long n) {
-        kp.put("maxLengthBytes",n);
+    public void setMaxLengthBytes(long timeout) {
+        kp.put("maxLengthBytes",timeout);
     }
 
     /**
@@ -490,9 +452,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
      */
     public synchronized void setSslTrustLevel(TrustLevel trustLevel) {
         this.sslTrustLevel = trustLevel;
-        
-        // force http client to be recreated with new trust level
-        disposeHttpClient();
     }
 
     protected transient SSLContext sslContext;
@@ -603,35 +562,8 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         return true;
     }
     
-    protected void doAbort(CrawlURI curi, HttpRequestBase request,
-            String annotation) {
-        curi.getAnnotations().add(annotation);
-        curi.getRecorder().close();
-        request.abort();
-    }
-
-    // XXX Unfortunately the place where midfetch abort happens is deep in the
-    // bowels of the http library code and it would be tricky and ugly to get
-    // these necessary variables in there. We keep these threadlocals instead.
-    private ThreadLocal<CrawlURI> threadActiveCrawlURI = new ThreadLocal<CrawlURI>();
-    private ThreadLocal<HttpRequestBase> threadActiveRequest = new ThreadLocal<HttpRequestBase>();
-    
-    protected boolean maybeMidfetchAbort() {
-        if (checkMidfetchAbort(threadActiveCrawlURI.get())) {
-            doAbort(threadActiveCrawlURI.get(), threadActiveRequest.get(), "midFetchAbort");
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     @Override
     protected void innerProcess(final CrawlURI curi) throws InterruptedException {
-        threadActiveCrawlURI.set(curi);
-        
-        // could call after fetch in finally block, but right here feels even more sure
-        resetHttpClient();
-        
         // Note begin time
         curi.setFetchBeginTime(System.currentTimeMillis());
 
@@ -650,24 +582,10 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         }
 
         String curiString = curi.getUURI().toString();
-        HttpRequestBase request = null;
-        if (curi.getFetchType() == FetchType.HTTP_POST) {
-            request = new HttpPost(curiString);
-            curi.setFetchType(FetchType.HTTP_POST);
-        } else {
-            request = new HttpGet(curiString);
-            curi.setFetchType(FetchType.HTTP_GET);
-        }
-        
-        threadActiveRequest.set(request);
-        configureRequest(curi, request);
-
-        HttpHost targetHost = URIUtils.extractHost(request.getURI());
         
         // Populate credentials. Set config so auth. is not automatic.
         BasicHttpContext contextForAuth = new BasicHttpContext();
-        boolean addedCredentials = populateTargetCredentials(curi, request, targetHost, contextForAuth);
-        populateHttpProxyCredential(curi, request, contextForAuth);
+        boolean addedCredentials = false;
         
         // set hardMax on bytes (if set by operator)
         long hardMax = getMaxLengthBytes();
@@ -678,16 +596,13 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         rec.getRecordedInput().setLimits(hardMax, timeoutMs, maxRateKBps);
 
         HttpResponse response = null;
-        try {
-            response = httpClient().execute(targetHost, request, contextForAuth);
+//        try {
+            response = null;
             addResponseContent(response, curi);
-        } catch (ClientProtocolException e) {
-            failedExecuteCleanup(request, curi, e);
-            return;
-        } catch (IOException e) {
-            failedExecuteCleanup(request, curi, e);
-            return;
-        }
+//        } catch (IOException e) {
+//            failedExecuteCleanup(curi, e);
+//            return;
+//        }
         
         // set softMax on bytes to get (if implied by content-length)
         long softMax = -1l;
@@ -696,15 +611,15 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
             softMax = Long.parseLong(h.getValue());
         }
         try {
-            if (!request.isAborted()) {
+            // if (!request.isAborted()) {
                 // Force read-to-end, so that any socket hangs occur here,
                 // not in later modules.
                 rec.getRecordedInput().readFullyOrUntil(softMax); 
-            }
+            // }
         } catch (RecorderTimeoutException ex) {
-            doAbort(curi, request, TIMER_TRUNC);
+//             doAbort(curi, request, TIMER_TRUNC);
         } catch (RecorderLengthExceededException ex) {
-            doAbort(curi, request, LENGTH_TRUNC);
+//             doAbort(curi, request, LENGTH_TRUNC);
         } catch (IOException e) {
             cleanup(curi, e, "readFully", S_CONNECT_LOST);
             return;
@@ -718,16 +633,12 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
             rec.close();
             // ensure recording has stopped
             rec.closeRecorders();
-            if (!request.isAborted()) {
-                request.reset();
-            }
+//            if (!request.isAborted()) {
+//                request.reset();
+//            }
             // Note completion time
             curi.setFetchCompletedTime(System.currentTimeMillis());
             
-            // finished with these (midfetch abort would have happened already)
-            threadActiveCrawlURI.set(null);
-            threadActiveRequest.set(null);
-
             // Set the response charset into the HttpRecord if available.
             setCharacterEncoding(curi, rec, response);
             setSizes(curi, rec);
@@ -757,8 +668,9 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
             handle401(response, curi);
         } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED) {
             // 407 - remember Proxy-Authenticate headers for later use 
-            kp.put("proxyAuthChallenges", 
-                    extractChallenges(response, curi, httpClient().getProxyAuthenticationStrategy()));
+//            kp.put("proxyAuthChallenges", 
+//                    extractChallenges(response, curi, httpClient().getProxyAuthenticationStrategy()));
+            kp.put("proxyAuthChallenges", null);
         }
 
         if (rec.getRecordedInput().isOpen()) {
@@ -771,132 +683,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
                 logger.log(Level.SEVERE, "second-chance RIS close failed", e);
             }
         }
-    }
-    
-    protected void populateHttpProxyCredential(CrawlURI curi,
-            HttpRequestBase request, BasicHttpContext context) {
-        
-        // this should have been set earlier
-        HttpHost proxyHost = ConnRouteParams.getDefaultProxy(request.getParams());
-        
-        String user = (String) getAttributeEither(curi, "httpProxyUser");
-        String password = (String) getAttributeEither(curi, "httpProxyPassword");
-        
-        if (proxyHost != null && kp.get("proxyAuthChallenges") != null && StringUtils.isNotEmpty(user)) {
-
-            @SuppressWarnings("unchecked")
-            Map<String,String> challenges = (Map<String, String>) kp.get("proxyAuthChallenges");
-            
-            AuthScheme authScheme = chooseAuthScheme(challenges, HttpHeaders.PROXY_AUTHENTICATE);
-            populateHttpCredential(proxyHost, context, authScheme, user, password);
-        }
-    }
-    
-    // clear out any state that could conceivably be left over from a fetch
-    protected void resetHttpClient() {
-        httpClient().getCredentialsProvider().clear();
-    }
-    
-    protected boolean populateHtmlFormCredential(CrawlURI curi,
-            HttpRequestBase request, HtmlFormCredential cred) {
-        if (cred.getFormItems() == null || cred.getFormItems().size() <= 0) {
-            logger.severe("No form items for " + curi);
-            return false;
-        }
-        
-        List<NameValuePair> formParams = new ArrayList<NameValuePair>();
-        for (Entry<String, String> n: cred.getFormItems().entrySet()) {
-            formParams.add(new BasicNameValuePair(n.getKey(), n.getValue()));
-        }
-
-        // XXX should it get charset from somewhere?
-        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formParams, HTTP.DEF_CONTENT_CHARSET);
-        HttpPost postRequest = (HttpPost) request;
-        postRequest.setEntity(entity);
-
-        return true;
-    }
-    
-    // http auth credential, either for proxy or target host
-    protected void populateHttpCredential(HttpHost host, HttpContext context, AuthScheme authScheme, String user, String password) {
-        UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(user, password);
-        
-        AuthCache authCache = (AuthCache) context.getAttribute(ClientContext.AUTH_CACHE);
-        if (authCache == null) {
-            authCache = new BasicAuthCache();
-            context.setAttribute(ClientContext.AUTH_CACHE, authCache);
-        }
-        authCache.put(host, authScheme);
-
-        httpClient().getCredentialsProvider().setCredentials(new AuthScope(host), credentials);
-    }
-    
-    /**
-     * Add credentials if any to passed <code>method</code>.
-     * 
-     * Do credential handling. Credentials are in two places. 1. Credentials
-     * that succeeded are added to the CrawlServer (Or rather, avatars for
-     * credentials are whats added because its not safe to keep around
-     * references to credentials). 2. Credentials to be tried are in the curi.
-     * Returns true if found credentials to be tried.
-     * 
-     * @param curi
-     *            Current CrawlURI.
-     * @param request 
-     * @param targetHost 
-     * @param context
-     *            The context to add credentials to.
-     * @return True if prepopulated <code>method</code> with credentials AND
-     *         the credentials came from the <code>curi</code>, not from the
-     *         CrawlServer. The former is special in that if the
-     *         <code>curi</curi> credentials
-     * succeed, then the caller needs to promote them from the CrawlURI to the
-     * CrawlServer so they are available for all subsequent CrawlURIs on this
-     * server.
-     */
-    protected boolean populateTargetCredentials(CrawlURI curi,
-            HttpRequestBase request, HttpHost targetHost, HttpContext context) {
-        // First look at the server avatars. Add any that are to be volunteered
-        // on every request (e.g. RFC2617 credentials). Every time creds will
-        // return true when we call 'isEveryTime().
-        String serverKey;
-        try {
-            serverKey = CrawlServer.getServerKey(curi.getUURI());
-        } catch (URIException e) {
-            return false;
-        }
-        CrawlServer server = serverCache.getServerFor(serverKey);
-        if (server.hasCredentials()) {
-            for (Credential c: server.getCredentials()) {
-                if (c.isEveryTime()) {
-                    if (c instanceof HttpAuthenticationCredential) {
-                        HttpAuthenticationCredential cred = (HttpAuthenticationCredential) c;
-                        AuthScheme authScheme = chooseAuthScheme(server.getHttpAuthChallenges(), HttpHeaders.WWW_AUTHENTICATE);
-                        populateHttpCredential(targetHost, context, authScheme, cred.getLogin(), cred.getPassword());
-                    } else {
-                        populateHtmlFormCredential(curi, request, (HtmlFormCredential) c);
-                    }
-                }
-            }
-        }
-
-        boolean result = false;
-
-        // Now look in the curi. The Curi will have credentials loaded either
-        // by the handle401 method if its a rfc2617 or it'll have been set into
-        // the curi by the preconditionenforcer as this login uri came through.
-        for (Credential c: curi.getCredentials()) {
-            if (c instanceof HttpAuthenticationCredential) {
-                HttpAuthenticationCredential cred = (HttpAuthenticationCredential) c;
-                AuthScheme authScheme = chooseAuthScheme(curi.getHttpAuthChallenges(), HttpHeaders.WWW_AUTHENTICATE);
-                populateHttpCredential(targetHost, context, authScheme, cred.getLogin(), cred.getPassword());
-                result = true;
-            } else {
-                result = populateHtmlFormCredential(curi, request, (HtmlFormCredential) c);
-            }
-        }
-
-        return result;
     }
     
     /**
@@ -937,16 +723,12 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
      *            CrawlURI that got a 401.
      */
     protected void handle401(HttpResponse response, final CrawlURI curi) {
-        Map<String, String> challenges = extractChallenges(response, curi, httpClient().getTargetAuthenticationStrategy());
-        AuthScheme authscheme = chooseAuthScheme(challenges, HttpHeaders.WWW_AUTHENTICATE);
+        Map<String, String> challenges = null;
 
         // remember WWW-Authenticate headers for later use 
         curi.setHttpAuthChallenges(challenges);
 
-        if (authscheme == null) {
-            return;
-        }
-        String realm = authscheme.getRealm();
+        String realm = null;
 
         // Look to see if this curi had rfc2617 avatars loaded. If so, are
         // any of them for this realm? If so, then the credential failed
@@ -985,81 +767,12 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
                             + " in " + curi);
                 } else {
                     found.attach(curi);
-                    logger.fine("Found credential for scheme " + authscheme
-                            + " realm " + realm + " in store for "
-                            + curi.toString());
+//                    logger.fine("Found credential for scheme " + authscheme
+//                            + " realm " + realm + " in store for "
+//                            + curi.toString());
                 }
             }
         }
-    }
-
-    /**
-     * @param response
-     * @param method
-     *            Method that got a 401 or 407.
-     * @param curi
-     *            CrawlURI that got a 401 or 407.
-     * @param authStrategy
-     *            Either ProxyAuthenticationStrategy or
-     *            TargetAuthenticationStrategy. Determines whether
-     *            Proxy-Authenticate or WWW-Authenticate header is consulted.
-     * 
-     * @return Map<authSchemeName -> challenge header value>
-     */
-    protected Map<String,String> extractChallenges(HttpResponse response, final CrawlURI curi, AuthenticationStrategy authStrategy) {
-        Map<String, Header> hcChallengeHeaders = null;
-        try {
-            hcChallengeHeaders = authStrategy.getChallenges(null, response, null);
-        } catch (MalformedChallengeException e) {
-            logger.fine("Failed challenge parse: " + e.getMessage());
-        }
-        if (hcChallengeHeaders == null || hcChallengeHeaders.size() <= 0) {
-            logger.fine("Failed to get auth challenge headers for " + curi);
-            return null;
-        }
-
-        // reorganize in non-library-specific way
-        Map<String,String> challenges = new HashMap<String, String>();
-        for (Entry<String, Header> challenge: hcChallengeHeaders.entrySet()) {
-            challenges.put(challenge.getKey(), challenge.getValue().getValue());
-        }
-
-        return challenges;
-    }
-    
-    protected AuthScheme chooseAuthScheme(Map<String, String> challenges, String challengeHeaderKey) {
-        HashSet<String> authSchemesLeftToTry = new HashSet<String>(challenges.keySet());
-        for (String authSchemeName: new String[]{"digest","basic"}) {
-            if (authSchemesLeftToTry.remove(authSchemeName)) {
-                AuthScheme authscheme = httpClient().getAuthSchemes().getAuthScheme(authSchemeName, null);
-                BasicHeader challenge = new BasicHeader(challengeHeaderKey, challenges.get(authSchemeName));
-
-                try {
-                    authscheme.processChallenge(challenge);
-                } catch (MalformedChallengeException e) {
-                    logger.fine(e.getMessage() + " " + challenge);
-                    continue;
-                }
-                if (authscheme.isConnectionBased()) {
-                    logger.fine("Connection based " + authscheme);
-                    continue;
-                }
-
-                if (authscheme.getRealm() == null
-                        || authscheme.getRealm().length() <= 0) {
-                    logger.fine("Empty realm " + authscheme);
-                    continue;
-                }
-
-                return authscheme;
-            }
-        }
-
-        for (String unsupportedSchemeName: authSchemesLeftToTry) {
-            logger.fine("Unsupported scheme: " + unsupportedSchemeName);
-        }
-        
-        return null;
     }
 
     /**
@@ -1085,136 +798,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         return result;
     }
 
-    protected void configureRequest(CrawlURI curi, HttpRequestBase request) {
-        // ignore cookies?
-        if (getIgnoreCookies()) {
-            HttpClientParams.setCookiePolicy(request.getParams(), CookiePolicy.IGNORE_COOKIES);
-        } else {
-            HttpClientParams.setCookiePolicy(request.getParams(), CookiePolicy.BROWSER_COMPATIBILITY);
-        }
-
-        // http 1.1
-        if (getUseHTTP11()) {
-            HttpProtocolParams.setVersion(request.getParams(), HttpVersion.HTTP_1_1);
-        } else {
-            HttpProtocolParams.setVersion(request.getParams(), HttpVersion.HTTP_1_0);
-        }
-        
-        // user-agent header
-        String userAgent = curi.getUserAgent();
-        if (userAgent == null) {
-            userAgent = getUserAgentProvider().getUserAgent();
-        }
-        // request.setHeader(HTTP.USER_AGENT, userAgent);
-        HttpProtocolParams.setUserAgent(request.getParams(), userAgent);
-
-        // from header
-        String from = getUserAgentProvider().getFrom();
-        if (StringUtils.isNotBlank(from)) {
-            request.setHeader("From", from);
-        }
-        
-        if (getMaxLengthBytes() > 0 && getSendRange()) {
-            request.setHeader(RANGE, RANGE_PREFIX.concat(Long
-                    .toString(getMaxLengthBytes() - 1)));
-        }
-
-        if (getSendConnectionClose()) {
-            request.setHeader(HEADER_SEND_CONNECTION_CLOSE);
-        }
-        
-        // referer
-        if (getSendReferer() && !LinkContext.PREREQ_MISC.equals(curi.getViaContext())) {
-            // RFC2616 says no referer header if referer is https and the url is not
-            String via = flattenVia(curi);
-            if (!StringUtils.isEmpty(via)
-                    && !(curi.getVia().getScheme().equals(HTTPS_SCHEME) 
-                            && curi.getUURI().getScheme().equals(HTTP_SCHEME))) {
-                request.setHeader(REFERER, via);
-            }
-        }
-
-        if (!curi.isPrerequisite()) {
-            setConditionalGetHeader(curi, request, getSendIfModifiedSince(), 
-                    A_LAST_MODIFIED_HEADER, "If-Modified-Since");
-            setConditionalGetHeader(curi, request, getSendIfNoneMatch(), 
-                    A_ETAG_HEADER, "If-None-Match");
-        }
-
-        HttpConnectionParams.setConnectionTimeout(request.getParams(), getSoTimeoutMs());
-        HttpConnectionParams.setSoTimeout(request.getParams(), getSoTimeoutMs());
-
-        // TODO: What happens if below method adds a header already
-        // added above: e.g. Connection, Range, or Referer?
-        configureAcceptHeaders(request);
-        configureProxy(curi, request);
-        configureBindAddress(curi, request);
-    }
-
-    /**
-     * Set the given conditional-GET header, if the setting is enabled and
-     * a suitable value is available in the URI history. 
-     * @param curi source CrawlURI
-     * @param request HTTP operation pending
-     * @param setting true/false enablement setting name to consult
-     * @param sourceHeader header to consult in URI history
-     * @param targetHeader header to set if possible
-     */
-    protected void setConditionalGetHeader(CrawlURI curi, HttpRequestBase request,
-            boolean conditional, String sourceHeader, String targetHeader) {
-        if (conditional) {
-            try {
-                HashMap<String, Object>[] history = curi.getFetchHistory();
-                int previousStatus = (Integer) history[0].get(A_STATUS);
-                if (previousStatus <= 0) {
-                    // do not reuse headers from any broken fetch
-                    return;
-                }
-                String previousValue = (String) history[0].get(sourceHeader);
-                if (previousValue != null) {
-                    request.setHeader(targetHeader, previousValue);
-                }
-            } catch (RuntimeException e) {
-                // for absent key, bad index, etc. just do nothing
-            }
-        }
-    }
-
-    protected void configureProxy(CrawlURI curi, HttpRequestBase request) {
-        String host = (String) getAttributeEither(curi, "httpProxyHost");
-        Integer port = (Integer) getAttributeEither(curi, "httpProxyPort");            
-
-        if (StringUtils.isNotEmpty(host) && port != null) {
-            HttpHost proxyHost = new HttpHost(host, port);
-            ConnRouteParams.setDefaultProxy(request.getParams(), proxyHost);
-
-            // Without this, httpcomponents adds "Proxy-Connection: Keep-Alive".
-            // Not sure if that would cause actual problems.
-            request.addHeader("Proxy-Connection", "close");
-        }
-    }
-    
-    
-    /**
-     * Setup local bind address, based on attributes in CrawlURI and 
-     * settings, in given HostConfiguration
-     * @param request 
-     */
-    protected void configureBindAddress(CrawlURI curi, HttpRequestBase request) {
-        String addressString = (String) getAttributeEither(curi, HTTP_BIND_ADDRESS);
-        if (StringUtils.isNotEmpty(addressString)) {
-            try {
-                InetAddress localAddress = InetAddress.getByName(addressString);
-                ConnRouteParams.setLocalAddress(request.getParams(), localAddress);
-            } catch (UnknownHostException e) {
-                // Convert all to RuntimeException so get an exception out
-                // if initialization fails.
-                throw new RuntimeException("Unknown host " + addressString
-                        + " in local-address");
-            }
-        }
-    }
-
     /**
      * Get a value either from inside the CrawlURI instance, or from
      * settings (module attributes).
@@ -1232,50 +815,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         }
         return kp.get(key);
     }
-
-    protected void configureAcceptHeaders(HttpRequestBase request) {
-        if (getAcceptCompression()) {
-            // we match the Firefox header exactly (ordering and whitespace)
-            // as a favor to caches
-            request.setHeader("Accept-Encoding","gzip,deflate"); 
-        }
-        List<String> acceptHeaders = getAcceptHeaders();
-        if (acceptHeaders.isEmpty()) {
-            return;
-        }
-        for (String hdr: acceptHeaders) {
-            String[] nvp = hdr.split(": +");
-            if (nvp.length == 2) {
-                request.addHeader(nvp[0], nvp[1]);
-            } else {
-                logger.warning("Invalid accept header: " + hdr);
-            }
-        }
-    }
-
-    protected transient ThreadLocal<RecordingHttpClient> threadHttpClient;
-    protected synchronized RecordingHttpClient httpClient() {
-        if (threadHttpClient == null) {
-            threadHttpClient = new ThreadLocal<RecordingHttpClient>() {
-                protected RecordingHttpClient initialValue() {
-                    RecordingHttpClient httpClient = new RecordingHttpClient(
-                            FetchHTTP.this, sslContext(), getServerCache());
-                    
-                    // some http client config
-                    HttpClientParams.setRedirecting(httpClient.getParams(), false);
-                    
-                    if (getCookieStore() != null) {
-                        httpClient.setCookieStore(getCookieStore());
-                    }
-                    
-                    return httpClient;
-                }
-            };
-        }
-        
-        return threadHttpClient.get();
-    }
-
 
     /**
      * Update CrawlURI internal sizes based on current transaction (and
@@ -1331,10 +870,8 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
      * @param exception
      *            Exception we failed with.
      */
-    protected void failedExecuteCleanup(final HttpRequestBase request,
-            final CrawlURI curi, final Exception exception) {
+    protected void failedExecuteCleanup(final CrawlURI curi, final Exception exception) {
         cleanup(curi, exception, "executeMethod", S_CONNECT_FAILED);
-        request.reset();
     }
     
     /**
@@ -1360,9 +897,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
         curi.getNonFatalFailures().add(exception);
         curi.setFetchStatus(status);
         curi.getRecorder().close();
-        
-        threadActiveCrawlURI.set(null);
-        threadActiveRequest.set(null);
     }
     
     public void start() {
@@ -1393,7 +927,6 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
     }
 
     protected void disposeHttpClient() {
-        threadHttpClient = null;
         sslContext = null;
     }
     
