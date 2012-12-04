@@ -21,7 +21,6 @@ package org.archive.modules.fetcher;
 import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -33,7 +32,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,10 +48,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.NoHttpResponseException;
-import org.apache.http.client.CookieStore;
-import org.apache.http.cookie.Cookie;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.archive.checkpointing.Checkpoint;
 import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
 import org.archive.modules.CrawlMetadata;
 import org.archive.modules.CrawlURI;
@@ -213,7 +207,7 @@ public class FetchHTTPTest extends ProcessorTestBase {
     protected static Request lastRequest = null;
     protected static Response lastResponse = null;
     
-    protected FetchHTTP fetcher;
+    protected FetchHTTPHttpCore fetcher;
     
     protected static SecurityHandler makeAuthWrapper(Authenticator authenticator,
             final String role, String realm, final String login,
@@ -354,7 +348,7 @@ public class FetchHTTPTest extends ProcessorTestBase {
         }
     }
 
-    protected FetchHTTP fetcher() throws IOException {
+    protected FetchHTTPHttpCore fetcher() throws IOException {
         if (fetcher == null) { 
             fetcher = makeModule();
         }
@@ -689,6 +683,7 @@ public class FetchHTTPTest extends ProcessorTestBase {
         }
     }
 
+    /*
     protected static class SimpleCookieStore extends AbstractCookieStore {
         protected CookieStore basicCookieStore = new BasicCookieStore();
     
@@ -747,6 +742,7 @@ public class FetchHTTPTest extends ProcessorTestBase {
             throw new RuntimeException("not implemented");
         }
     }
+    */
 
     public void testHttpProxy() throws Exception {
         ensureHttpServers();
@@ -1064,15 +1060,15 @@ public class FetchHTTPTest extends ProcessorTestBase {
     }
     
     @Override
-    protected FetchHTTP makeModule() throws IOException {
-        FetchHTTP fetchHttp = newTestFetchHttp(getUserAgentString());
+    protected FetchHTTPHttpCore makeModule() throws IOException {
+        FetchHTTPHttpCore fetchHttp = newTestFetchHttp(getUserAgentString());
         fetchHttp.start();
         return fetchHttp;
     }
     
-    public static FetchHTTP newTestFetchHttp(String userAgentString) {
-        FetchHTTP fetchHttp = new FetchHTTP();
-        fetchHttp.setCookieStore(new SimpleCookieStore());
+    public static FetchHTTPHttpCore newTestFetchHttp(String userAgentString) {
+        FetchHTTPHttpCore fetchHttp = new FetchHTTPHttpCore();
+        // fetchHttp.setCookieStore(new SimpleCookieStore());
         fetchHttp.setServerCache(new DefaultServerCache());
         CrawlMetadata uap = new CrawlMetadata();
         uap.setUserAgentTemplate(userAgentString);
