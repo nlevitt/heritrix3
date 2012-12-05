@@ -41,13 +41,6 @@ import javax.net.ssl.TrustManager;
 
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HTTP;
 import org.archive.httpclient.ConfigurableX509TrustManager;
 import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
 import org.archive.io.RecorderLengthExceededException;
@@ -497,60 +490,6 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
         return true;
     }
     
-    /**
-     * Set the transfer, content encodings based on headers (if necessary). 
-     * 
-     * @param rec
-     *            Recorder for this request.
-     * @param response
-     *            Method used for the request.
-     */
-    protected void setOtherCodings(CrawlURI uri, final Recorder rec,
-            final HttpResponse response) {
-        if (response.getEntity() != null) {
-            rec.setInputIsChunked(response.getEntity().isChunked()); 
-            Header contentEncodingHeader = response.getEntity().getContentEncoding(); 
-            if (contentEncodingHeader != null) {
-                String ce = contentEncodingHeader.getValue().trim();
-                try {
-                    rec.setContentEncoding(ce);
-                } catch (IllegalArgumentException e) {
-                    uri.getAnnotations().add("unsatisfiableContentEncoding:" + StringUtils.stripToEmpty(ce));
-                }
-            }
-        }
-    }
-
-    /**
-     * Set the character encoding based on the result headers or default.
-     * 
-     * The HttpClient returns its own default encoding ("ISO-8859-1") if one
-     * isn't specified in the Content-Type response header. We give the user the
-     * option of overriding this, so we need to detect the case where the
-     * default is returned.
-     * 
-     * Now, it may well be the case that the default returned by HttpClient and
-     * the default defined by the user are the same.
-     * 
-     * TODO:FIXME?: This method does not do the "detect the case where the
-     * [HttpClient] default is returned" mentioned above! Why not?
-     * 
-     * @param rec
-     *            Recorder for this request.
-     * @param response
-     *            Method used for the request.
-     */
-    protected void setCharacterEncoding(CrawlURI curi, final Recorder rec,
-            final HttpResponse response) {
-        Charset charset = ContentType.getOrDefault(response.getEntity()).getCharset();
-        if (charset != null) {
-            rec.setCharset(charset);
-        } else {
-            // curi.getAnnotations().add("unsatisfiableCharsetInHeader:"+StringUtils.stripToEmpty(encoding));
-            rec.setCharset(getDefaultCharset());
-        }
-    }
-
     protected boolean checkMidfetchAbort(CrawlURI curi) {
         if (curi.isPrerequisite()) {
             return false;
@@ -583,8 +522,6 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
 
         String curiString = curi.getUURI().toString();
         
-        // Populate credentials. Set config so auth. is not automatic.
-        BasicHttpContext contextForAuth = new BasicHttpContext();
         boolean addedCredentials = false;
         
         // set hardMax on bytes (if set by operator)
@@ -595,10 +532,7 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
         long maxRateKBps = getMaxFetchKBSec();
         rec.getRecordedInput().setLimits(hardMax, timeoutMs, maxRateKBps);
 
-        HttpResponse response = null;
 //        try {
-            response = null;
-            addResponseContent(response, curi);
 //        } catch (IOException e) {
 //            failedExecuteCleanup(curi, e);
 //            return;
@@ -606,7 +540,7 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
         
         // set softMax on bytes to get (if implied by content-length)
         long softMax = -1l;
-        Header h = response.getLastHeader("content-length");
+        // Header h = response.getLastHeader("content-length");
         if (h != null) {
             softMax = Long.parseLong(h.getValue());
         }
@@ -658,20 +592,20 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
                     + curi.getContentType());
         }
 
-        if (isSuccess(curi) && addedCredentials) {
-            // Promote the credentials from the CrawlURI to the CrawlServer
-            // so they are available for all subsequent CrawlURIs on this
-            // server.
-            promoteCredentials(curi);
-        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-            // 401 is not 'success'.
-            handle401(response, curi);
-        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED) {
-            // 407 - remember Proxy-Authenticate headers for later use 
+//        if (isSuccess(curi) && addedCredentials) {
+//            // Promote the credentials from the CrawlURI to the CrawlServer
+//            // so they are available for all subsequent CrawlURIs on this
+//            // server.
+//            promoteCredentials(curi);
+//        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+//            // 401 is not 'success'.
+//            handle401(response, curi);
+//        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED) {
+//            // 407 - remember Proxy-Authenticate headers for later use 
 //            kp.put("proxyAuthChallenges", 
 //                    extractChallenges(response, curi, httpClient().getProxyAuthenticationStrategy()));
-            kp.put("proxyAuthChallenges", null);
-        }
+//            kp.put("proxyAuthChallenges", null);
+//        }
 
         if (rec.getRecordedInput().isOpen()) {
             logger.severe(curi.toString() + " RIS still open. Should have"

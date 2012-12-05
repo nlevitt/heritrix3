@@ -31,7 +31,6 @@ import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_STATUS;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -52,7 +51,6 @@ import javax.net.ssl.TrustManager;
 
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
@@ -77,28 +75,14 @@ import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.http.conn.params.ConnRouteParams;
 import org.apache.http.entity.ContentType;
-import org.apache.http.impl.DefaultConnectionReuseStrategy;
-import org.apache.http.impl.DefaultHttpClientConnection;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpProtocolParams;
 import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.BasicHttpProcessor;
-import org.apache.http.protocol.ExecutionContext;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpRequestExecutor;
-import org.apache.http.protocol.RequestConnControl;
-import org.apache.http.protocol.RequestContent;
-import org.apache.http.protocol.RequestExpectContinue;
-import org.apache.http.protocol.RequestTargetHost;
-import org.apache.http.protocol.RequestUserAgent;
-import org.apache.http.util.EntityUtils;
 import org.archive.httpclient.ConfigurableX509TrustManager;
 import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
 import org.archive.io.RecorderLengthExceededException;
@@ -124,9 +108,9 @@ import org.springframework.context.Lifecycle;
  * HTTP fetcher that uses <a href="http://hc.apache.org/">Apache HttpComponents</a>.
  * @contributor nlevitt
  */
-public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
+public class FetchHttpX extends FetchHTTPBase implements Lifecycle {
 
-    private static Logger logger = Logger.getLogger(FetchHTTP.class.getName());
+    private static Logger logger = Logger.getLogger(FetchHttpX.class.getName());
 
     public static final String REFERER = "Referer";
     public static final String RANGE = "Range";
@@ -1275,7 +1259,7 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
             threadHttpClient = new ThreadLocal<RecordingHttpClient>() {
                 protected RecordingHttpClient initialValue() {
                     RecordingHttpClient httpClient = new RecordingHttpClient(
-                            FetchHTTP.this, sslContext(), getServerCache());
+                            FetchHttpX.this, sslContext(), getServerCache());
                     
                     // some http client config
                     HttpClientParams.setRedirecting(httpClient.getParams(), false);
@@ -1422,66 +1406,4 @@ public class FetchHTTP extends FetchHTTPBase implements Lifecycle {
             return null;
         }
     }
-    
-    public static void main(String[] args) throws Exception {
-
-        HttpParams params = new BasicHttpParams();
-        HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
-        HttpProtocolParams.setContentCharset(params, "UTF-8");
-        HttpProtocolParams.setUserAgent(params, "HttpComponents/1.1");
-        HttpProtocolParams.setUseExpectContinue(params, true);
-
-        BasicHttpProcessor httpproc = new BasicHttpProcessor();
-        httpproc.addRequestInterceptor(new RequestContent());
-        httpproc.addRequestInterceptor(new RequestTargetHost());
-        httpproc.addRequestInterceptor(new RequestConnControl());
-        httpproc.addRequestInterceptor(new RequestUserAgent());
-        httpproc.addRequestInterceptor(new RequestExpectContinue());
-
-        HttpRequestExecutor httpexecutor = new HttpRequestExecutor();
-
-        HttpContext context = new BasicHttpContext(null);
-        HttpHost host = new HttpHost("archive.org", 80);
-
-        DefaultHttpClientConnection conn = new DefaultHttpClientConnection();
-        ConnectionReuseStrategy connStrategy = new DefaultConnectionReuseStrategy();
-
-        context.setAttribute(ExecutionContext.HTTP_CONNECTION, conn);
-        context.setAttribute(ExecutionContext.HTTP_TARGET_HOST, host);
-
-        try {
-
-            String[] targets = {
-                    "/",
-                    "/servlets-examples/servlet/RequestInfoExample",
-                    "/somewhere%20in%20pampa"};
-
-            for (int i = 0; i < targets.length; i++) {
-                if (!conn.isOpen()) {
-                    Socket socket = new Socket(host.getHostName(), host.getPort());
-                    conn.bind(socket, params);
-                }
-                BasicHttpRequest request = new BasicHttpRequest("GET", targets[i]);
-                System.out.println(">> Request URI: " + request.getRequestLine().getUri());
-
-                request.setParams(params);
-                httpexecutor.preProcess(request, httpproc, context);
-                HttpResponse response = httpexecutor.execute(request, conn, context);
-                response.setParams(params);
-                httpexecutor.postProcess(response, httpproc, context);
-
-                System.out.println("<< Response: " + response.getStatusLine());
-                System.out.println(EntityUtils.toString(response.getEntity()));
-                System.out.println("==============");
-                if (!connStrategy.keepAlive(response, context)) {
-                    conn.close();
-                } else {
-                    System.out.println("Connection kept alive...");
-                }
-            }
-        } finally {
-            conn.close();
-        }
-    }
-
 }
