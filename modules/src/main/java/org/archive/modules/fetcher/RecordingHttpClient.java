@@ -59,19 +59,19 @@ import org.archive.util.Recorder;
  */
 public class RecordingHttpClient extends DefaultHttpClient {
     protected ServerCache serverCache;
-    protected FetchHTTP fetcher;
+    protected FetchHTTPHttpClient fetcher;
     protected SSLContext sslContext;
 
     /**
      * 
-     * @param fetchHTTP2 
+     * @param fetchHTTPHttpClient 
      * @param sslContext 
      * @param serverCache
      */
-    public RecordingHttpClient(FetchHTTP fetchHTTP2, SSLContext sslContext, ServerCache serverCache) {
+    public RecordingHttpClient(FetchHTTPHttpClient fetchHTTPHttpClient, SSLContext sslContext, ServerCache serverCache) {
         super();
         
-        this.fetcher = fetchHTTP2;
+        this.fetcher = fetchHTTPHttpClient;
         this.sslContext = sslContext;
         this.serverCache = serverCache;
         
@@ -165,12 +165,12 @@ public class RecordingHttpClient extends DefaultHttpClient {
      * @contributor nlevitt
      */
     protected static class RecordingClientConnectionOperator extends DefaultClientConnectionOperator {
-        private FetchHTTP fetcher;
+        private FetchHTTPHttpClient fetcher;
 
         public RecordingClientConnectionOperator(SchemeRegistry schemes,
-                DnsResolver dnsResolver, FetchHTTP fetcher) {
+                DnsResolver dnsResolver, FetchHTTPHttpClient fetcher2) {
             super(schemes, dnsResolver);
-            this.fetcher = fetcher;
+            this.fetcher = fetcher2;
         }
 
         @Override
