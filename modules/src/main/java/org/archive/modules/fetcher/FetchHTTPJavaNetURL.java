@@ -120,8 +120,6 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
     }
 
 
-    protected static final Header HEADER_SEND_CONNECTION_CLOSE = new BasicHeader(
-            HTTP.CONN_DIRECTIVE, HTTP.CONN_CLOSE);
     {
         setSendConnectionClose(true);
     }
@@ -532,80 +530,7 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
         long maxRateKBps = getMaxFetchKBSec();
         rec.getRecordedInput().setLimits(hardMax, timeoutMs, maxRateKBps);
 
-//        try {
-//        } catch (IOException e) {
-//            failedExecuteCleanup(curi, e);
-//            return;
-//        }
-        
-        // set softMax on bytes to get (if implied by content-length)
-        long softMax = -1l;
-        // Header h = response.getLastHeader("content-length");
-        if (h != null) {
-            softMax = Long.parseLong(h.getValue());
-        }
-        try {
-            // if (!request.isAborted()) {
-                // Force read-to-end, so that any socket hangs occur here,
-                // not in later modules.
-                rec.getRecordedInput().readFullyOrUntil(softMax); 
-            // }
-        } catch (RecorderTimeoutException ex) {
-//             doAbort(curi, request, TIMER_TRUNC);
-        } catch (RecorderLengthExceededException ex) {
-//             doAbort(curi, request, LENGTH_TRUNC);
-        } catch (IOException e) {
-            cleanup(curi, e, "readFully", S_CONNECT_LOST);
-            return;
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // For weird windows-only ArrayIndex exceptions from native code
-            // see http://forum.java.sun.com/thread.jsp?forum=11&thread=378356
-            // treating as if it were an IOException
-            cleanup(curi, e, "readFully", S_CONNECT_LOST);
-            return;
-        } finally {
-            rec.close();
-            // ensure recording has stopped
-            rec.closeRecorders();
-//            if (!request.isAborted()) {
-//                request.reset();
-//            }
-            // Note completion time
-            curi.setFetchCompletedTime(System.currentTimeMillis());
-            
-            // Set the response charset into the HttpRecord if available.
-            setCharacterEncoding(curi, rec, response);
-            setSizes(curi, rec);
-            setOtherCodings(curi, rec, response); 
-        }
 
-        if (digestContent) {
-            curi.setContentDigest(algorithm, 
-                rec.getRecordedInput().getDigestValue());
-        }
-
-        if (logger.isLoggable(Level.FINE)) {
-            logger.fine(((curi.getFetchType() == HTTP_POST) ? "POST" : "GET")
-                    + " " + curi.getUURI().toString() + " "
-                    + response.getStatusLine().getStatusCode() + " "
-                    + rec.getRecordedInput().getSize() + " "
-                    + curi.getContentType());
-        }
-
-//        if (isSuccess(curi) && addedCredentials) {
-//            // Promote the credentials from the CrawlURI to the CrawlServer
-//            // so they are available for all subsequent CrawlURIs on this
-//            // server.
-//            promoteCredentials(curi);
-//        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-//            // 401 is not 'success'.
-//            handle401(response, curi);
-//        } else if (response.getStatusLine().getStatusCode() == HttpStatus.SC_PROXY_AUTHENTICATION_REQUIRED) {
-//            // 407 - remember Proxy-Authenticate headers for later use 
-//            kp.put("proxyAuthChallenges", 
-//                    extractChallenges(response, curi, httpClient().getProxyAuthenticationStrategy()));
-//            kp.put("proxyAuthChallenges", null);
-//        }
 
         if (rec.getRecordedInput().isOpen()) {
             logger.severe(curi.toString() + " RIS still open. Should have"
@@ -641,69 +566,6 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
                 if (cs != null) {
                     cs.addCredential(c);
                     cs.setHttpAuthChallenges(curi.getHttpAuthChallenges());
-                }
-            }
-        }
-    }
-
-    /**
-     * Server is looking for basic/digest auth credentials (RFC2617). If we have
-     * any, put them into the CrawlURI and have it come around again.
-     * Presence of the credential serves as flag to frontier to requeue
-     * promptly. If we already tried this domain and still got a 401, then our
-     * credentials are bad. Remove them and let this curi die.
-     * @param response 401 http response 
-     * @param curi
-     *            CrawlURI that got a 401.
-     */
-    protected void handle401(HttpResponse response, final CrawlURI curi) {
-        Map<String, String> challenges = null;
-
-        // remember WWW-Authenticate headers for later use 
-        curi.setHttpAuthChallenges(challenges);
-
-        String realm = null;
-
-        // Look to see if this curi had rfc2617 avatars loaded. If so, are
-        // any of them for this realm? If so, then the credential failed
-        // if we got a 401 and it should be let die a natural 401 death.
-        Set<Credential> curiRfc2617Credentials = getCredentials(curi,
-                HttpAuthenticationCredential.class);
-        HttpAuthenticationCredential extant = HttpAuthenticationCredential.getByRealm(
-                curiRfc2617Credentials, realm, curi);
-        if (extant != null) {
-            // Then, already tried this credential. Remove ANY rfc2617
-            // credential since presence of a rfc2617 credential serves
-            // as flag to frontier to requeue this curi and let the curi
-            // die a natural death.
-            extant.detachAll(curi);
-            logger.warning("Auth failed (401) though supplied realm " + realm
-                    + " to " + curi.toString());
-        } else {
-            // Look see if we have a credential that corresponds to this
-            // realm in credential store. Filter by type and credential
-            // domain. If not, let this curi die. Else, add it to the
-            // curi and let it come around again. Add in the AuthScheme
-            // we got too. Its needed when we go to run the Auth on
-            // second time around.
-            String serverKey = getServerKey(curi);
-            CrawlServer server = serverCache.getServerFor(serverKey);
-            Set<Credential> storeRfc2617Credentials = getCredentialStore().subset(curi,
-                    HttpAuthenticationCredential.class, server.getName());
-            if (storeRfc2617Credentials == null
-                    || storeRfc2617Credentials.size() <= 0) {
-                logger.fine("No rfc2617 credentials for " + curi);
-            } else {
-                HttpAuthenticationCredential found = HttpAuthenticationCredential.getByRealm(
-                        storeRfc2617Credentials, realm, curi);
-                if (found == null) {
-                    logger.fine("No rfc2617 credentials for realm " + realm
-                            + " in " + curi);
-                } else {
-                    found.attach(curi);
-//                    logger.fine("Found credential for scheme " + authscheme
-//                            + " realm " + realm + " in store for "
-//                            + curi.toString());
                 }
             }
         }
@@ -761,7 +623,7 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
         // set reporting size
         curi.setContentSize(rec.getRecordedInput().getSize());
         // special handling for 304-not modified
-        if (curi.getFetchStatus() == HttpStatus.SC_NOT_MODIFIED
+        if (curi.getFetchStatus() == 304
                 && curi.getFetchHistory() != null) {
             Map<String, Object>[] history = curi.getFetchHistory();
             if (history[0] != null && history[0].containsKey(A_REFERENCE_LENGTH)) {
@@ -772,25 +634,6 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
                 curi.setContentSize(rec.getRecordedInput().getSize()
                         + referenceLength);
             }
-        }
-    }
-
-    /**
-     * This method populates <code>curi</code> with response status and
-     * content type.
-     * 
-     * @param curi
-     *            CrawlURI to populate.
-     * @param response
-     *            Method to get response status and headers from.
-     */
-    protected void addResponseContent(HttpResponse response, CrawlURI curi) {
-        curi.setFetchStatus(response.getStatusLine().getStatusCode());
-        Header ct = response.getLastHeader("content-type");
-        curi.setContentType(ct == null ? null : ct.getValue());
-        
-        for (Header h: response.getAllHeaders()) {
-            curi.putHttpResponseHeader(h.getName(), h.getValue());
         }
     }
 
