@@ -18,13 +18,15 @@
  */
 package org.archive.modules.fetcher;
 
-import static org.archive.modules.CrawlURI.FetchType.HTTP_POST;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_CONNECT_FAILED;
-import static org.archive.modules.fetcher.FetchStatusCodes.S_CONNECT_LOST;
 import static org.archive.modules.fetcher.FetchStatusCodes.S_DOMAIN_PREREQUISITE_FAILURE;
 import static org.archive.modules.recrawl.RecrawlAttributeConstants.A_REFERENCE_LENGTH;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -40,15 +42,11 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
 import org.apache.commons.httpclient.URIException;
-import org.apache.commons.lang.StringUtils;
 import org.archive.httpclient.ConfigurableX509TrustManager;
 import org.archive.httpclient.ConfigurableX509TrustManager.TrustLevel;
-import org.archive.io.RecorderLengthExceededException;
-import org.archive.io.RecorderTimeoutException;
 import org.archive.modules.CrawlURI;
 import org.archive.modules.credential.Credential;
 import org.archive.modules.credential.CredentialStore;
-import org.archive.modules.credential.HttpAuthenticationCredential;
 import org.archive.modules.deciderules.AcceptDecideRule;
 import org.archive.modules.deciderules.DecideResult;
 import org.archive.modules.deciderules.DecideRule;
@@ -714,6 +712,18 @@ public class FetchHTTPJavaNetURL extends FetchHTTPBase implements Lifecycle {
             logger.severe(e.getMessage() + ": " + uri);
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        for (String urlStr: new String[] {"http://archive.org/", "http://archive.org/404-me-homie"}) {
+            System.out.println("\n----- urlStr -----\n");
+            URL url = new URL(urlStr);
+            URLConnection conn = url.openConnection();
+            InputStream in = conn.getInputStream();
+            for (int b = in.read(); b != -1; b = in.read()) {
+                System.out.write(b);
+            }
         }
     }
 }
