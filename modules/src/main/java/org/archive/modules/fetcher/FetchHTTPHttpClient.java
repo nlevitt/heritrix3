@@ -613,8 +613,8 @@ public class FetchHTTPHttpClient extends FetchHTTPBase implements Lifecycle {
     // XXX Unfortunately the place where midfetch abort happens is deep in the
     // bowels of the http library code and it would be tricky and ugly to get
     // these necessary variables in there. We keep these threadlocals instead.
-    private ThreadLocal<CrawlURI> threadActiveCrawlURI = new ThreadLocal<CrawlURI>();
-    private ThreadLocal<HttpRequestBase> threadActiveRequest = new ThreadLocal<HttpRequestBase>();
+    protected ThreadLocal<CrawlURI> threadActiveCrawlURI = new ThreadLocal<CrawlURI>();
+    protected ThreadLocal<HttpRequestBase> threadActiveRequest = new ThreadLocal<HttpRequestBase>();
     
     protected boolean maybeMidfetchAbort() {
         if (checkMidfetchAbort(threadActiveCrawlURI.get())) {
