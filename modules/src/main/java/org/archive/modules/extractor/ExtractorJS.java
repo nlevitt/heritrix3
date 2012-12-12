@@ -170,15 +170,16 @@ public class ExtractorJS extends ContentExtractor {
         if (UriUtils.isVeryLikelyUri(candidate)) {
             try {
                 int max = ext.getExtractorParameters().getMaxOutlinks();
+                Link link;
                 if (handlingJSFile) {
-                    Link.addRelativeToVia(curi, max, candidate, JS_MISC, 
+                    link = Link.addRelativeToVia(curi, max, candidate, JS_MISC, 
                             SPECULATIVE);
-                    return true;
                 } else {
-                    Link.addRelativeToBase(curi, max, candidate, JS_MISC, 
+                    link = Link.addRelativeToBase(curi, max, candidate, JS_MISC, 
                             SPECULATIVE);
-                    return true;
                 }
+                link.setUnresolvedUri(candidate);
+                return true;
             } catch (URIException e) {
                 ext.logUriError(e, curi.getUURI(), candidate);
             }
