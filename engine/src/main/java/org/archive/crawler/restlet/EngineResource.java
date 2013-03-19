@@ -19,26 +19,19 @@
 
 package org.archive.crawler.restlet;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.archive.crawler.framework.CrawlController.State;
 import org.archive.crawler.framework.CrawlJob;
 import org.archive.crawler.framework.Engine;
-import org.archive.crawler.framework.CrawlController.State;
-import org.archive.crawler.restlet.models.CrawlJobModel;
 import org.archive.crawler.restlet.models.EngineModel;
 import org.archive.crawler.restlet.models.ViewModel;
 import org.archive.util.FileUtils;
@@ -228,7 +221,7 @@ public class EngineResource extends BaseResource {
         ArrayList<Map.Entry<String,CrawlJob>> jobConfigurations = new ArrayList<Map.Entry<String,CrawlJob>>(getEngine().getJobConfigs().entrySet());
         Collections.sort(jobConfigurations, new Comparator<Map.Entry<String, CrawlJob>>() {
             public int compare(Map.Entry<String, CrawlJob> cj1, Map.Entry<String, CrawlJob> cj2) {
-                return (cj2.getValue()).compareTo(cj1.getValue());
+                return (cj1.getValue()).compareTo(cj2.getValue());
             }
         });
         for(Map.Entry<String,CrawlJob> jobConfig : jobConfigurations) {
