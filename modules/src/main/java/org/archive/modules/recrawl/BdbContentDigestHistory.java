@@ -106,7 +106,6 @@ public class BdbContentDigestHistory extends AbstractContentDigestHistory implem
             historyDbConfig = new BdbModule.BdbConfig();
             historyDbConfig.setTransactional(false);
             historyDbConfig.setAllowCreate(true);
-            historyDbConfig.setDeferredWrite(true);
         }
         
         return historyDbConfig;

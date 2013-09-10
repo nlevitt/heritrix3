@@ -78,7 +78,6 @@ public abstract class PersistProcessor extends AbstractPersistProcessor {
         BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
         dbConfig.setTransactional(false);
         dbConfig.setAllowCreate(true);
-        dbConfig.setDeferredWrite(true);
         HISTORY_DB_CONFIG = dbConfig;
     }
 

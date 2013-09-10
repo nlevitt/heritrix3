@@ -96,7 +96,6 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
         protected boolean allowCreate;
         protected boolean sortedDuplicates;
         protected boolean transactional;
-        protected boolean deferredWrite = true; 
 
         public BdbConfig() {
         }
@@ -119,7 +118,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
 
         public DatabaseConfig toDatabaseConfig() {
             DatabaseConfig result = new DatabaseConfig();
-            result.setDeferredWrite(deferredWrite);
+            result.setDeferredWrite(false);
             result.setTransactional(transactional);
             result.setAllowCreate(allowCreate);
             result.setSortedDuplicates(sortedDuplicates);
@@ -132,10 +131,6 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
 
         public void setTransactional(boolean transactional) {
             this.transactional = transactional;
-        }
-
-        public void setDeferredWrite(boolean b) {
-            this.deferredWrite = true; 
         }
     }
     
