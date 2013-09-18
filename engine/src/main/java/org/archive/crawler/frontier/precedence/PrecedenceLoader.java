@@ -40,6 +40,7 @@ import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.bind.tuple.StringBinding;
 import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
 
 
@@ -105,10 +106,13 @@ public class PrecedenceLoader {
         // setup target environment
         EnhancedEnvironment targetEnv = PersistProcessor.setupCopyEnvironment(env);
         StoredClassCatalog classCatalog = targetEnv.getClassCatalog();
+        DatabaseConfig dbConfig = new DatabaseConfig();
+        dbConfig.setTransactional(false);
+        dbConfig.setAllowCreate(true);
         Database historyDB = targetEnv.openDatabase(
                 null,
                 PersistProcessor.URI_HISTORY_DBNAME,
-                PersistProcessor.HISTORY_DB_CONFIG.toDatabaseConfig());
+                dbConfig);
         @SuppressWarnings({ "rawtypes", "unchecked" })
         StoredSortedMap<String, Object> historyMap = new StoredSortedMap<String, Object>(historyDB,
                 new StringBinding(), new SerialBinding(classCatalog, Map.class), true);

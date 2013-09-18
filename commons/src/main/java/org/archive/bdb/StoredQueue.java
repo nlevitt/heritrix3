@@ -138,19 +138,6 @@ public class StoredQueue<E extends Serializable> extends AbstractQueue<E>  {
         peekItem = null;
         return head; 
     }
-
-    /**
-     * A suitable DatabaseConfig for the Database backing a StoredQueue. 
-     * (However, it is not necessary to use these config options.)
-     * 
-     * @return DatabaseConfig suitable for queue
-     */
-    public static BdbModule.BdbConfig databaseConfig() {
-        BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
-        dbConfig.setTransactional(false);
-        dbConfig.setAllowCreate(true);
-        return dbConfig;
-    }
     
     public void close() {
         try {

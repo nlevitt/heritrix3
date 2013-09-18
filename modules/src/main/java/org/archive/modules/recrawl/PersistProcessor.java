@@ -36,7 +36,6 @@ import java.util.logging.Logger;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SerializationUtils;
-import org.archive.bdb.BdbModule;
 import org.archive.modules.CrawlURI;
 import org.archive.util.ArchiveUtils;
 import org.archive.util.FileUtils;
@@ -73,14 +72,6 @@ public abstract class PersistProcessor extends AbstractPersistProcessor {
     /** name of history Database */
     public static final String URI_HISTORY_DBNAME = "uri_history";
     
-    public static final BdbModule.BdbConfig HISTORY_DB_CONFIG;
-    static {
-        BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
-        dbConfig.setTransactional(false);
-        dbConfig.setAllowCreate(true);
-        HISTORY_DB_CONFIG = dbConfig;
-    }
-
     public PersistProcessor() {
     }
     
@@ -118,7 +109,7 @@ public abstract class PersistProcessor extends AbstractPersistProcessor {
         // open the source env history DB, copying entries to target env
         EnhancedEnvironment sourceEnv = setupCopyEnvironment(sourceDir, true);
         StoredClassCatalog sourceClassCatalog = sourceEnv.getClassCatalog();
-        DatabaseConfig historyDbConfig = HISTORY_DB_CONFIG.toDatabaseConfig();
+        DatabaseConfig historyDbConfig = new DatabaseConfig();
         historyDbConfig.setReadOnly(true);
         Database sourceHistoryDB = sourceEnv.openDatabase(
                 null, URI_HISTORY_DBNAME, historyDbConfig);
@@ -230,8 +221,11 @@ public abstract class PersistProcessor extends AbstractPersistProcessor {
             FileUtils.ensureWriteableDirectory(envFile);
             targetEnv = setupCopyEnvironment(envFile);
             classCatalog = targetEnv.getClassCatalog();
+            DatabaseConfig dbConfig = new DatabaseConfig();
+            dbConfig.setTransactional(false);
+            dbConfig.setAllowCreate(true);
             historyDB = targetEnv.openDatabase(null, URI_HISTORY_DBNAME, 
-                    HISTORY_DB_CONFIG.toDatabaseConfig());
+                    dbConfig);
             historyMap = new StoredSortedMap<String,Map>(historyDB, 
                     new StringBinding(), new SerialBinding<Map>(classCatalog,
                         Map.class), true);

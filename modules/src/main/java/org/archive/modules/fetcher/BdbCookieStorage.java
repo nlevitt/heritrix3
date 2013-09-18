@@ -66,7 +66,7 @@ public class BdbCookieStorage extends AbstractCookieStorage implements Checkpoin
     protected SortedMap<String,Cookie> prepareMap() {
         try {
             StoredClassCatalog classCatalog = bdb.getClassCatalog();
-            BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
+            BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
             dbConfig.setTransactional(false);
             dbConfig.setAllowCreate(true);
             cookieDb = bdb.openDatabase(COOKIEDB_NAME, dbConfig, isCheckpointRecovery);

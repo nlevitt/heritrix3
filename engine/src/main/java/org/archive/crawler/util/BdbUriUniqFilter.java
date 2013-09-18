@@ -211,7 +211,7 @@ implements Lifecycle, Checkpointable, BeanNameAware, DisposableBean {
      * @return DatabaseConfig to use
      */
     protected BdbModule.BdbConfig getDatabaseConfig() {
-        BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
+        BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
         return dbConfig;
     }
     

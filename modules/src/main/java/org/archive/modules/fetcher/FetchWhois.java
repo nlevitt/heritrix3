@@ -196,7 +196,7 @@ public class FetchWhois extends Processor implements CoreAttributeConstants,
         }
         
         try {
-            BdbModule.BdbConfig dbConfig = new BdbModule.BdbConfig();
+            BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
             dbConfig.setTransactional(false);
 
             boolean isRecovery = recoveryCheckpoint != null;

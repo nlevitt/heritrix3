@@ -78,7 +78,7 @@ implements Lifecycle {
         String dbName = PersistProcessor.URI_HISTORY_DBNAME;
         try {
             StoredClassCatalog classCatalog = bdb.getClassCatalog();
-            BdbModule.BdbConfig dbConfig = PersistProcessor.HISTORY_DB_CONFIG;
+            BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
 
             historyDb = bdb.openDatabase(dbName, dbConfig, true);
             SerialBinding sb = new SerialBinding(classCatalog, Map.class);

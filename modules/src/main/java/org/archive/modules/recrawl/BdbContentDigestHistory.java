@@ -103,7 +103,7 @@ public class BdbContentDigestHistory extends AbstractContentDigestHistory implem
     protected transient BdbModule.BdbConfig historyDbConfig;
     protected BdbModule.BdbConfig historyDbConfig() {
         if (historyDbConfig == null) {
-            historyDbConfig = new BdbModule.BdbConfig();
+            historyDbConfig = bdb.defaultBdbConfig();
             historyDbConfig.setTransactional(false);
             historyDbConfig.setAllowCreate(true);
         }

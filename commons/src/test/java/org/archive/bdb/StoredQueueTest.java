@@ -21,15 +21,15 @@ package org.archive.bdb;
 
 import java.io.File;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.io.FileUtils;
-import org.archive.bdb.BdbModule;
-import org.archive.bdb.StoredQueue;
 import org.archive.util.TmpDirTestCase;
 import org.archive.util.bdbje.EnhancedEnvironment;
 
 import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentConfig;
 
@@ -48,8 +48,9 @@ public class StoredQueueTest extends TmpDirTestCase {
             envConfig.setTransactional(false);
             envConfig.setAllowCreate(true);
             env = new EnhancedEnvironment(envDir,envConfig);
-            BdbModule.BdbConfig dbConfig = StoredQueue.databaseConfig();
-            db = env.openDatabase(null, "StoredMapTest", dbConfig.toDatabaseConfig());
+            DatabaseConfig dbConfig = new DatabaseConfig();
+            dbConfig.setAllowCreate(true);
+            db = env.openDatabase(null, "StoredMapTest", dbConfig);
         } catch (DatabaseException e) {
             throw new RuntimeException(e);
         }

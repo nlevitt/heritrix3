@@ -95,11 +95,13 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
     public static class BdbConfig implements Serializable {
         private static final long serialVersionUID = 1L;
 
-        protected boolean allowCreate;
-        protected boolean sortedDuplicates;
-        protected boolean transactional;
+        protected boolean allowCreate = false;
+        protected boolean sortedDuplicates = false;
+        protected boolean transactional = false;
+        protected boolean deferredWrite;
 
-        public BdbConfig() {
+        private BdbConfig(boolean deferredWrite) {
+            this.deferredWrite = deferredWrite;
         }
 
         public boolean isAllowCreate() {
@@ -120,7 +122,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
 
         public DatabaseConfig toDatabaseConfig() {
             DatabaseConfig result = new DatabaseConfig();
-            result.setDeferredWrite(false);
+            result.setDeferredWrite(deferredWrite);
             result.setTransactional(transactional);
             result.setAllowCreate(allowCreate);
             result.setSortedDuplicates(sortedDuplicates);
@@ -134,6 +136,14 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
         public void setTransactional(boolean transactional) {
             this.transactional = transactional;
         }
+        
+        public boolean isDeferredWrite() {
+            return deferredWrite;
+        }
+    }
+    
+    public BdbConfig defaultBdbConfig() {
+        return new BdbConfig(deferredWrite);
     }
     
     protected ConfigPath dir = new ConfigPath("bdbmodule subdirectory","state");
@@ -198,6 +208,14 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
     }
     public void setUseHardLinkCheckpoints(boolean useHardLinkCheckpoints) {
         this.useHardLinkCheckpoints = useHardLinkCheckpoints;
+    }
+    
+    protected boolean deferredWrite = true;
+    public boolean getDeferredWrite() {
+        return deferredWrite;
+    }
+    public void setDeferredWrite(boolean deferredWrite) {
+        this.deferredWrite = deferredWrite;
     }
     
     private transient EnhancedEnvironment bdbEnvironment;
@@ -361,16 +379,16 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
     public <K extends Serializable> StoredQueue<K> getStoredQueue(String dbname, Class<K> clazz, boolean usePriorData) {
         try {
             Database queueDb;
-            queueDb = openDatabase(dbname,
-                    StoredQueue.databaseConfig(), usePriorData);
+            BdbConfig bdbConfig = defaultBdbConfig();
+            bdbConfig.setTransactional(false);
+            bdbConfig.setAllowCreate(true);
+            queueDb = openDatabase(dbname, bdbConfig, usePriorData);
             return new StoredQueue<K>(queueDb, clazz, getClassCatalog());
         } catch (DatabaseException e) {
             throw new RuntimeException(e);
         }
-        
     }
-
-
+    
     /**
      * Get an ObjectIdentityBdbCache, backed by a BDB Database of the 
      * given name, with the given value class type. If 'recycle' is true,
@@ -656,7 +674,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
      * @return
      */
     public <K,V> DisposableStoredSortedMap<K, V> getStoredMap(String dbName, Class<K> keyClass, Class<V> valueClass, boolean allowDuplicates, boolean usePriorData) {
-        BdbConfig config = new BdbConfig(); 
+        BdbConfig config = defaultBdbConfig();
         config.setSortedDuplicates(allowDuplicates);
         config.setAllowCreate(!usePriorData); 
         Database mapDb;
