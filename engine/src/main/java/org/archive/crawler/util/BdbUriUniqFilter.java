@@ -238,7 +238,9 @@ implements Lifecycle, Checkpointable, BeanNameAware, DisposableBean {
         if (this.alreadySeen != null) {
             try {
                 env = this.alreadySeen.getEnvironment();
-                alreadySeen.sync();
+                if (alreadySeen.getConfig().getDeferredWrite()) {
+                    alreadySeen.sync();
+                }
             } catch (DatabaseException e) {
                 logger.severe(e.getMessage());
             }

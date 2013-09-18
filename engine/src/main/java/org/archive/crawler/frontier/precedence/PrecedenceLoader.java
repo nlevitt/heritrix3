@@ -155,7 +155,9 @@ public class PrecedenceLoader {
         }
         
         // cleanup
-        historyDB.sync();
+        if (historyDB.getConfig().getDeferredWrite()) {
+            historyDB.sync();
+        }
         historyDB.close();
         targetEnv.close();
         System.out.println(count+" records imported from "+source+" to BDB env "+env);

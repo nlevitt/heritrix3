@@ -174,7 +174,9 @@ implements ObjectIdentityCache<V>, Closeable, Serializable, MapEvictionListener<
         if (this.db != null) {
             try {
                 sync(); 
-                this.db.sync();
+                if (this.db.getConfig().getDeferredWrite()) {
+                    this.db.sync();
+                }
                 this.db.close();
             } catch (DatabaseException e) {
                 logger.log(Level.WARNING,"problem closing ObjectIdentityBdbCache",e);
@@ -338,11 +340,13 @@ implements ObjectIdentityCache<V>, Closeable, Serializable, MapEvictionListener<
             iter.remove();
             diskMap.put(entry.getKey(), entry.getValue());
         }
-        
-        try {
-            this.db.sync();
-        } catch (DatabaseException e) {
-            throw new RuntimeException(e);
+
+        if (this.db.getConfig().getDeferredWrite()) {
+            try {
+                this.db.sync();
+            } catch (DatabaseException e) {
+                throw new RuntimeException(e);
+            }
         }
         
         

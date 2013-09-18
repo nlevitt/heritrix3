@@ -503,13 +503,13 @@ public class BdbMultipleWorkQueues {
      * @see <a href="http://www.sleepycat.com/jedocs/GettingStartedGuide/DB.html">Deferred Write Databases</a>
      */
     protected void sync() {
-    	if (this.pendingUrisDB == null) {
-    		return;
-    	}
-        try {
-            this.pendingUrisDB.sync();
-        } catch (DatabaseException e) {
-            e.printStackTrace();
+        if (this.pendingUrisDB != null
+                && this.pendingUrisDB.getConfig().getDeferredWrite()) {
+            try {
+                this.pendingUrisDB.sync();
+            } catch (DatabaseException e) {
+                e.printStackTrace();
+            }
         }
     }
     

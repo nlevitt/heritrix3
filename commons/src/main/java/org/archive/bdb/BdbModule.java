@@ -325,7 +325,9 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
         }
         Database db = dpc.database;
         try {
-            db.sync();
+            if (dpc.config.isDeferredWrite()) {
+                db.sync();
+            }
             db.close();
         } catch (DatabaseException e) {
             LOGGER.log(Level.WARNING, "Error closing db " + name, e);
@@ -464,7 +466,9 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
         try {
             // sync all databases
             for (DatabasePlusConfig dbc: databases.values()) {
-                dbc.database.sync();
+                if (dbc.config.isDeferredWrite()) {
+                    dbc.database.sync();
+                }
             }
         
             // Do a force checkpoint.  Thats what a sync does (i.e. doSync).

@@ -141,7 +141,9 @@ public class StoredQueue<E extends Serializable> extends AbstractQueue<E>  {
     
     public void close() {
         try {
-            queueDb.sync();
+            if (queueDb.getConfig().getDeferredWrite()) {
+                queueDb.sync();
+            }
             queueDb.close();
         } catch (DatabaseException e) {
             throw new RuntimeException(e);

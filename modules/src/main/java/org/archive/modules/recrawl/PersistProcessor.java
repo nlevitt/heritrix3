@@ -238,7 +238,9 @@ public abstract class PersistProcessor extends AbstractPersistProcessor {
             // failed to populate it
             if (envFile != null) {
                 logger.info(count + " records imported from " + sourcePath + " to BDB env " + envFile);
-                historyDB.sync();
+                if (historyDB.getConfig().getDeferredWrite()) {
+                    historyDB.sync();
+                }
                 historyDB.close();
                 targetEnv.close();
             } else {

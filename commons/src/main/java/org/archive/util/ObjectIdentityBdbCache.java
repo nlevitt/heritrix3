@@ -201,8 +201,10 @@ implements ObjectIdentityCache<V>, Closeable, Serializable {
         // Close out my bdb db.
         if (this.db != null) {
             try {
-                sync(); 
-                this.db.sync();
+                sync();
+                if (this.db.getConfig().getDeferredWrite()) {
+                    this.db.sync();
+                }
                 this.db.close();
             } catch (DatabaseException e) {
                 logger.log(Level.WARNING,"problem closing ObjectIdentityBdbCache",e);
@@ -400,11 +402,13 @@ implements ObjectIdentityCache<V>, Closeable, Serializable {
         }
         pageOutStaleEntries();
         
-        // force sync of deferred-writes
-        try {
-            this.db.sync();
-        } catch (DatabaseException e) {
-            throw new RuntimeException(e);
+        if (this.db.getConfig().getDeferredWrite()) {
+            // force sync of deferred-writes
+            try {
+                this.db.sync();
+            } catch (DatabaseException e) {
+                throw new RuntimeException(e);
+            }
         }
         
         if (logger.isLoggable(Level.FINE)) {
