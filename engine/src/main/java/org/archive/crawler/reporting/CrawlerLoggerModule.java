@@ -399,6 +399,12 @@ public class CrawlerLoggerModule
         this.recoveryCheckpoint = checkpoint; 
     }
     
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
+    
     public Logger getNonfatalErrors() {
         return nonfatalErrors;
     }

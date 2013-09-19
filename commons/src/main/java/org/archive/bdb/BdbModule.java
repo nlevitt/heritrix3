@@ -248,7 +248,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
                 doRecover(); 
             }
    
-            setup(getDir().getFile(), !isRecovery);
+            setup(getDir().getFile(), !isRecovery && !resumeState);
         } catch (DatabaseException e) {
             throw new IllegalStateException(e);
         } catch (IOException e) {
@@ -718,4 +718,9 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
         close();
     }
 
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
 }

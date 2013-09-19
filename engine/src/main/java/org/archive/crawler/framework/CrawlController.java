@@ -347,7 +347,7 @@ implements Serializable,
         hasStarted = true; 
         sendCrawlStateChangeEvent(State.PREPARING, CrawlStatus.PREPARING);
         
-        if(recoveryCheckpoint==null) {
+        if(recoveryCheckpoint==null && !resumeState) {
             // only announce (trigger scheduling of) seeds
             // when doing a cold (non-recovery) start
             getSeeds().announceSeeds();
@@ -678,4 +678,9 @@ implements Serializable,
         this.recoveryCheckpoint = recoveryCheckpoint;
     }
     
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
 }//EOC

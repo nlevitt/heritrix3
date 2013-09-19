@@ -340,4 +340,9 @@ public class SurtPrefixedDecideRule extends PredicatedDecideRule implements
         this.recoveryCheckpoint = recoveryCheckpoint;
     }
 
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
 }//EOC

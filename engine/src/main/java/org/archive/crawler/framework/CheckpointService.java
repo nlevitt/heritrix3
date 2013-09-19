@@ -134,6 +134,20 @@ public class CheckpointService implements Lifecycle, ApplicationContextAware, Ha
         return this.recoveryCheckpoint;
     }
     
+    protected Boolean resumeState = false;
+    /**
+     * If true, attempt to resume from pre-existing state when launching the
+     * crawl job. That means opening and resuming from straight from existing
+     * BDB databases. Separate from actual checkpointing. Probably most useful
+     * when BdbModule#deferredWrite is false.
+     */
+    public void setResumeState(Boolean resumeState) {
+        this.resumeState = resumeState;
+    }
+    public Boolean getResumeState() {
+        return resumeState;
+    }
+    
     protected CrawlController controller;
     public CrawlController getCrawlController() {
         return this.controller;
@@ -403,6 +417,16 @@ public class CheckpointService implements Lifecycle, ApplicationContextAware, Ha
         
         for(Checkpointable c : toSetRecovery.values()) {
             c.setRecoveryCheckpoint(recoveryCheckpoint);
+        }
+    }
+    
+    public synchronized void announceResumeState() {
+        if (isRunning) {
+            throw new RuntimeException("may not announce resumeState after launch");
+        }
+        Map<String,Checkpointable> checkpointables = appCtx.getBeansOfType(Checkpointable.class);
+        for (Checkpointable c: checkpointables.values()) {
+            c.setResumeState(resumeState);
         }
     }
     

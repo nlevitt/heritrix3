@@ -317,4 +317,10 @@ implements HasKeyedProperties,
     public void setRecoveryCheckpoint(Checkpoint checkpoint) {
         this.recoveryCheckpoint = checkpoint; 
     }
+    
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
 }

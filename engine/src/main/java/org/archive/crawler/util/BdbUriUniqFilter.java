@@ -105,15 +105,15 @@ implements Lifecycle, Checkpointable, BeanNameAware, DisposableBean {
         if(isRunning()) {
             return; 
         }
-        boolean isRecovery = (recoveryCheckpoint != null);
+        boolean recycle = (recoveryCheckpoint != null || resumeState);
         try {
             BdbModule.BdbConfig config = getDatabaseConfig();
-            config.setAllowCreate(!isRecovery);
-            initialize(bdb.openDatabase(DB_NAME, config, isRecovery));
+            config.setAllowCreate(!recycle);
+            initialize(bdb.openDatabase(DB_NAME, config, recycle));
         } catch (DatabaseException e) {
             throw new IllegalStateException(e);
         }
-        if(isRecovery) {
+        if(recoveryCheckpoint != null) {
             JSONObject json = recoveryCheckpoint.loadJson(beanName);
             try {
                 count.set(json.getLong("count"));
@@ -399,6 +399,12 @@ implements Lifecycle, Checkpointable, BeanNameAware, DisposableBean {
     protected Checkpoint recoveryCheckpoint;
     public void setRecoveryCheckpoint(Checkpoint recoveryCheckpoint) {
         this.recoveryCheckpoint = recoveryCheckpoint;
+    }
+
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
     }
 
     /**

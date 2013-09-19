@@ -203,10 +203,16 @@ public class JobResource extends BaseResource {
         AlertThreadGroup.setThreadLogger(cj.getJobLogger());
         String action = form.getFirstValue("action");
         if ("launch".equals(action)) {
-            String selectedCheckpoint = form.getFirstValue("checkpoint");
-            if (StringUtils.isNotEmpty(selectedCheckpoint)) {
-                cj.getCheckpointService().setRecoveryCheckpointByName(
-                        selectedCheckpoint);
+            if (StringUtils.isNotEmpty(form.getFirstValue("resumeState"))) {
+                logger.info("resumeState=true");
+                cj.getCheckpointService().setResumeState(true);
+                cj.getCheckpointService().announceResumeState();
+            } else {
+                String selectedCheckpoint = form.getFirstValue("checkpoint");
+                if (StringUtils.isNotEmpty(selectedCheckpoint)) {
+                    cj.getCheckpointService().setRecoveryCheckpointByName(
+                            selectedCheckpoint);
+                }
             }
             cj.launch();
         } else if ("checkXML".equals(action)) {

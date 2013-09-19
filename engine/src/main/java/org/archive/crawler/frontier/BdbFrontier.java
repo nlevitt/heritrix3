@@ -126,7 +126,7 @@ implements Checkpointable, BeanNameAware {
     protected BdbMultipleWorkQueues createMultipleWorkQueues()
     throws DatabaseException {
         Database db;
-        boolean recycle = (recoveryCheckpoint != null);
+        boolean recycle = (recoveryCheckpoint != null || resumeState);
 
         BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
         dbConfig.setAllowCreate(!recycle);
@@ -283,9 +283,10 @@ implements Checkpointable, BeanNameAware {
     
     @Override
     protected void initAllQueues() throws DatabaseException {
-        boolean isRecovery = (recoveryCheckpoint != null);
-        this.allQueues = bdb.getObjectCache("allqueues", isRecovery, WorkQueue.class, BdbWorkQueue.class);
-        if(isRecovery) {
+        boolean recycle = (recoveryCheckpoint != null || resumeState);
+        boolean isCheckpointRecovery = (recoveryCheckpoint != null);
+        this.allQueues = bdb.getObjectCache("allqueues", recycle, WorkQueue.class, BdbWorkQueue.class);
+        if(isCheckpointRecovery) {
             // restore simple instance fields 
             JSONObject json = recoveryCheckpoint.loadJson(beanName);
             try {
@@ -328,7 +329,7 @@ implements Checkpointable, BeanNameAware {
 
     @Override
     protected void initOtherQueues() throws DatabaseException {
-        boolean recycle = (recoveryCheckpoint != null);
+        boolean recycle = (recoveryCheckpoint != null || resumeState);
         
         // tiny risk of OutOfMemoryError: if giant number of snoozed
         // queues all wake-to-ready at once
@@ -345,7 +346,7 @@ implements Checkpointable, BeanNameAware {
                 "snoozedOverflow", Long.class, DelayedWorkQueue.class, true, false);
             
         this.futureUris = bdb.getStoredMap(
-                "futureUris", Long.class, CrawlURI.class, true, recoveryCheckpoint!=null);
+                "futureUris", Long.class, CrawlURI.class, true, recycle);
         
         // initialize master map in which other queues live
         this.pendingUris = createMultipleWorkQueues();
@@ -461,5 +462,11 @@ implements Checkpointable, BeanNameAware {
             val = (val==null) ? mark : val+","+mark;
             queueSummaries.put(key, val);
         }
+    }
+    
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
     }
 }

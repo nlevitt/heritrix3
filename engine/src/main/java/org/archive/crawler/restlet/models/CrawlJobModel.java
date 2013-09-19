@@ -94,7 +94,6 @@ public class CrawlJobModel extends LinkedHashMap<String, Object> implements Seri
         this.put("crawlLogTail", generateCrawlLogTail());
         this.put("configFiles",generateConfigReferencedPaths(urlBaseRef));
 
-
         this.put("isLaunchInfoPartial", crawlJob.isLaunchInfoPartial());
         this.put("isRunning", crawlJob.isRunning());
         this.put("isLaunchable",crawlJob.isLaunchable());
@@ -102,27 +101,39 @@ public class CrawlJobModel extends LinkedHashMap<String, Object> implements Seri
         this.put("alertCount", crawlJob.getAlertCount());        
 
         
-        if (!crawlJob.hasApplicationContext())
+        if (!crawlJob.hasApplicationContext()) {
             actions.add("build");
+        }
 
-        if (!crawlJob.isProfile() && crawlJob.isLaunchable())
+        if (!crawlJob.isProfile() && crawlJob.isLaunchable()) {
             actions.add("launch");
-        if (crawlJob.isPausable())
+        }
+        if (crawlJob.isPausable()) {
             actions.add("pause");
-        if (crawlJob.isUnpausable())
+        }
+        if (crawlJob.isUnpausable()) {
             actions.add("unpause");
+        }
 
-        if (crawlJob.getCheckpointService() != null && crawlJob.isRunning())
+        if (crawlJob.getCheckpointService() != null && crawlJob.isRunning()) {
             actions.add("checkpoint");
-        if (crawlJob.isRunning())
+        }
+        if (crawlJob.isRunning()) {
             actions.add("terminate");
-        if (crawlJob.hasApplicationContext())
+        }
+        if (crawlJob.hasApplicationContext()) {
             actions.add("teardown");
+        }
+        
+        if (crawlJob.getCheckpointService() != null && crawlJob.isLaunchable()) {
+            this.put("allowResume", true);
+        }
 
         if (crawlJob.getCheckpointService() != null) {
             Checkpoint recoveryCheckpoint = crawlJob.getCheckpointService().getRecoveryCheckpoint();
-            if (recoveryCheckpoint != null)
+            if (recoveryCheckpoint != null) {
                 this.put("checkpointName", recoveryCheckpoint.getName());
+            }
         }
         
         List<String> checkpointFiles = new ArrayList<String>();
@@ -134,10 +145,13 @@ public class CrawlJobModel extends LinkedHashMap<String, Object> implements Seri
             }
         }
         this.put("checkpointFiles",checkpointFiles);
-        if (crawlJob.hasApplicationContext())
+        if (crawlJob.hasApplicationContext()) {
             this.put("alertLogFilePath",crawlJob.getCrawlController().getLoggerModule().getAlertsLogPath().getFile().getAbsolutePath());
-        if(crawlJob.isRunning() || (crawlJob.hasApplicationContext() && !crawlJob.isLaunchable()))
+        }
+        if(crawlJob.isRunning() || (crawlJob.hasApplicationContext() && !crawlJob.isLaunchable())) {
             this.put("crawlLogFilePath",crawlJob.getCrawlController().getLoggerModule().getCrawlLogPath().getFile().getAbsolutePath());
+        }
+        
         this.put("reports", generateReports());
     }
     public String formatBytes(Long bytes){

@@ -54,8 +54,12 @@ implements Lifecycle, Checkpointable {
             return;
         }
         try {
-            this.servers = bdb.getObjectCache("servers", isCheckpointRecovery, CrawlServer.class, CrawlServer.class);
-            this.hosts = bdb.getObjectCache("hosts", isCheckpointRecovery, CrawlHost.class, CrawlHost.class);
+            this.servers = bdb.getObjectCache("servers", 
+                    isCheckpointRecovery || resumeState, 
+                    CrawlServer.class, CrawlServer.class);
+            this.hosts = bdb.getObjectCache("hosts", 
+                    isCheckpointRecovery || resumeState, 
+                    CrawlHost.class, CrawlHost.class);
         } catch (DatabaseException e) {
             throw new IllegalStateException(e);
         }
@@ -95,5 +99,11 @@ implements Lifecycle, Checkpointable {
         // just remember that we are doing checkpoint-recovery;
         // actual state recovery happens via BdbModule
         isCheckpointRecovery = true; 
+    }
+    
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
     }
 }

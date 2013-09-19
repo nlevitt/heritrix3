@@ -48,6 +48,9 @@
 				<input type='submit' name='action' value='teardown' <#if !job.hasApplicationContext> disabled='disabled' title='no instance'</#if> />
 			</span>
 		</div>
+		<#if job.allowResume??>
+			<div> <label> <input type="checkbox" name="resumeState" /> resume crawl state from previous crawl, if any </label> </div>
+		</#if>
 		<#assign checkpointName=job.checkpointName! />
 		<#assign checkpoints=job.checkpointFiles! />
 			<#if checkpointName?has_content >

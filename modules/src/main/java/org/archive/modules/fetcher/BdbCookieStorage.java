@@ -69,7 +69,8 @@ public class BdbCookieStorage extends AbstractCookieStorage implements Checkpoin
             BdbModule.BdbConfig dbConfig = bdb.defaultBdbConfig();
             dbConfig.setTransactional(false);
             dbConfig.setAllowCreate(true);
-            cookieDb = bdb.openDatabase(COOKIEDB_NAME, dbConfig, isCheckpointRecovery);
+            cookieDb = bdb.openDatabase(COOKIEDB_NAME, dbConfig, 
+                    isCheckpointRecovery || resumeState);
             cookies = 
                 new StoredSortedMap<String,Cookie>(
                     cookieDb,
@@ -111,6 +112,12 @@ public class BdbCookieStorage extends AbstractCookieStorage implements Checkpoin
         // just remember that we are doing checkpoint-recovery;
         // actual state recovery happens via BdbModule
         isCheckpointRecovery = true; 
+    }
+    
+    protected boolean resumeState;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
     }
 
 }

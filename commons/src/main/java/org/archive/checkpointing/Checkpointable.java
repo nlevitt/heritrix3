@@ -76,4 +76,6 @@ public interface Checkpointable {
      */
     @Autowired(required=false)
     void setRecoveryCheckpoint(Checkpoint recoveryCheckpoint);
+    
+    void setResumeState(boolean resumeState);
 }

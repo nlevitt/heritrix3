@@ -1099,4 +1099,9 @@ public class StatisticsTracker
         this.recoveryCheckpoint = recoveryCheckpoint;
     }
     
+    protected boolean resumeState = false;
+    @Override
+    public void setResumeState(boolean resumeState) {
+        this.resumeState = resumeState;
+    }
 }
