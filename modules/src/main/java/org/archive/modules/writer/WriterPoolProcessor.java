@@ -391,17 +391,10 @@ implements Lifecycle, Checkpointable, WriterPoolSettings {
         return h.getIP().getHostAddress();
     }
 
-    // TODO: add non-urgent checkpoint request, that waits for a good
-    // moment (when (W)ARCs are already rolling over)? 
     public void doCheckpoint(Checkpoint checkpointInProgress) 
     throws IOException {
-        // close all ARCs on checkpoint
-        this.pool.close();
-        
+        pool.flush();
         super.doCheckpoint(checkpointInProgress);
-   
-        // reopen post checkpoint
-        setupPool(this.serial);
     }
     
     @Override
