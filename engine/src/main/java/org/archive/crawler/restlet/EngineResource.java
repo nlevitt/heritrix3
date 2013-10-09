@@ -22,11 +22,7 @@ package org.archive.crawler.restlet;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.archive.crawler.framework.CrawlController.State;
@@ -34,7 +30,6 @@ import org.archive.crawler.framework.CrawlJob;
 import org.archive.crawler.framework.Engine;
 import org.archive.crawler.restlet.models.EngineModel;
 import org.archive.crawler.restlet.models.ViewModel;
-import org.archive.util.FileUtils;
 import org.restlet.Context;
 import org.restlet.data.CharacterSet;
 import org.restlet.data.Form;
@@ -183,6 +178,8 @@ public class EngineResource extends BaseResource {
             if(!cancel) {
                 System.exit(0); 
             }
+        } else if ("gc".equals(action)) {
+            System.gc();
         }
         // default: redirect to GET self
         getResponse().redirectSeeOther(getRequest().getOriginalRef());
@@ -212,46 +209,8 @@ public class EngineResource extends BaseResource {
         if(!baseRef.endsWith("/")) {
             baseRef += "/";
         }
-        EngineModel model = new EngineModel(getEngine(), baseRef);
         
-        List<Map<String,Object>> jobList = new ArrayList<Map<String,Object>>();
-        model.put("jobs", jobList);
-        
-        //Generate list of jobs
-        ArrayList<Map.Entry<String,CrawlJob>> jobConfigurations = new ArrayList<Map.Entry<String,CrawlJob>>(getEngine().getJobConfigs().entrySet());
-        Collections.sort(jobConfigurations, new Comparator<Map.Entry<String, CrawlJob>>() {
-            public int compare(Map.Entry<String, CrawlJob> cj1, Map.Entry<String, CrawlJob> cj2) {
-                return (cj1.getValue()).compareTo(cj2.getValue());
-            }
-        });
-        for(Map.Entry<String,CrawlJob> jobConfig : jobConfigurations) {
-            CrawlJob job = jobConfig.getValue();
-            HashMap<String, Object> crawlJobModel = new HashMap<String, Object>();
-            crawlJobModel.put("shortName",job.getShortName());
-            crawlJobModel.put("url",baseRef+"job/"+job.getShortName());
-            crawlJobModel.put("isProfile",job.isProfile());
-            crawlJobModel.put("launchCount",job.getLaunchCount());
-            crawlJobModel.put("lastLaunch",job.getLastLaunch());
-            crawlJobModel.put("hasApplicationContext",job.hasApplicationContext());
-            crawlJobModel.put("statusDescription", job.getJobStatusDescription());
-            crawlJobModel.put("isLaunchInfoPartial", job.isLaunchInfoPartial());
-            File primaryConfig = FileUtils.tryToCanonicalize(job.getPrimaryConfig());
-            crawlJobModel.put("primaryConfig", primaryConfig.getAbsolutePath());
-            crawlJobModel.put("primaryConfigUrl", baseRef + "jobdir/" + primaryConfig.getName());
-            if (job.getCrawlController() != null) {
-                crawlJobModel.put("crawlControllerState", job.getCrawlController().getState());
-                if (job.getCrawlController().getState() == State.FINISHED) {
-                    crawlJobModel.put("crawlExitStatus", job.getCrawlController().getCrawlExitStatus());
-                }
-            }
-            
-            crawlJobModel.put("key", jobConfig.getKey());
-            jobList.add(crawlJobModel);
-        }
-        
-        
-
-        return model;
+        return new EngineModel(getEngine(), baseRef);
     }
     
     protected void writeHtml(Writer writer) {
@@ -265,7 +224,7 @@ public class EngineResource extends BaseResource {
         ViewModel viewModel = new ViewModel();
         viewModel.setFlashes(Flash.getFlashes(getRequest()));
         viewModel.put("baseRef",baseRef);
-        viewModel.put("filePathSeparator", File.pathSeparator);
+        viewModel.put("fileSeparator", File.separator);
         viewModel.put("engine", model);
         viewModel.put("cssRef", getStylesheetRef());
 

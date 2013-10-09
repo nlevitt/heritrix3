@@ -6,13 +6,12 @@
 	<link rel="stylesheet" type="text/css" href="${cssRef}">
 </head>
 <body>
-	<h1>
-
-
-
+	<h1 style="margin-bottom:0">
 		Job <i>${job.shortName}</i> (<#if job.isLaunchInfoPartial>at least </#if>${job.launchCount} 
 		launches<#if job.lastLaunch??>, last ${job.lastLaunchTime} ago</#if>)
 	</h1>
+	<div style="margin-bottom:1em"><a href="/engine">up to engine</a></div>
+
 	<!--flashed message -->
 	<#list flashes as flash>
 		<div class='flash${flash.kind}'>
@@ -92,7 +91,7 @@
 					<#if !job.sizeTotalsReport??>
 						<i>n/a</i>
 					<#else>
-						${job.formatBytes(job.sizeTotalsReport.total)} crawled ( ${job.formatBytes(job.sizeTotalsReport.novel)} novel, ${job.formatBytes(job.sizeTotalsReport.dupByHash)} dupByHash, ${job.formatBytes(job.sizeTotalsReport.notModified)} notModified)
+						${job.formatBytes(job.sizeTotalsReport.total)} crawled (${job.formatBytes(job.sizeTotalsReport.novel)} novel, ${job.formatBytes(job.sizeTotalsReport.dupByHash)} dupByHash, ${job.formatBytes(job.sizeTotalsReport.notModified)} notModified)
 					</#if>
 
 				</div>
@@ -128,8 +127,8 @@
 				<#if !job.threadReport??><i>n/a</i>
 				<#else>
 				${job.threadReport.toeCount} threads: 
-				<#list job.threadReport.steps as step>${step.value} ${step.key}<#if step_has_next>, </#if></#list>;
-				<#list job.threadReport.processors as proc>${proc.value} ${proc.key}<#if proc_has_next>, </#if></#list>
+				<#list job.threadReport.steps as step>${step}<#if step_has_next>, </#if></#list>;
+				<#list job.threadReport.processors as proc>${proc}<#if proc_has_next>, </#if></#list>
 				</#if>
 			</dd>
 			<dt><a href="report/FrontierSummaryReport">Frontier</a></dt>
@@ -164,7 +163,7 @@ ${line?html}
 	</#if>
 
 	<h2>Files</h2>
-	<h3>Browser <a href='jobdir'>Job Directory</a></h3>
+	<h3>Browse <a href='jobdir'>Job Directory</a></h3>
 	<h3>Configuration-referenced Paths</h3>
 	<#assign configRefPaths=job.configFiles! />
 	<#if !configRefPaths?has_content >
