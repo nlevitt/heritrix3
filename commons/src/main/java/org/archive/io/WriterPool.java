@@ -292,5 +292,5 @@ public abstract class WriterPool {
         }
 
         availableWriters.addAll(writers);
-   }
+    }
 }
