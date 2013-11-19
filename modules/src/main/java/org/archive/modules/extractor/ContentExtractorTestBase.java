@@ -132,12 +132,25 @@ public abstract class ContentExtractorTestBase extends ProcessorTestBase {
     
     public static Recorder createRecorder(String content, String charset)
             throws IOException {
+        return createRecorder(content, charset, 0l);
+    }
+    public static Recorder createRecorder(String content, String charset, long contentBegin)
+            throws IOException {
         File temp = File.createTempFile("test", ".tmp");
         Recorder recorder = new Recorder(temp, 1024, 1024);
-        byte[] b = content.getBytes(charset);
-        ByteArrayInputStream bais = new ByteArrayInputStream(b);
+        byte[] bs = content.getBytes(charset);
+        ByteArrayInputStream bais = new ByteArrayInputStream(bs);
         InputStream is = recorder.inputWrap(bais);
-        for (int x = is.read(); x >= 0; x = is.read());
+        // for (int x = is.read(); x >= 0; x = is.read());
+        int b;
+        int n = 0;
+        do {
+            if (n == contentBegin) {
+                recorder.markContentBegin();
+            }
+            b = is.read();
+            n++;
+        } while (b >= 0);
         is.close();
         return recorder;
     }
