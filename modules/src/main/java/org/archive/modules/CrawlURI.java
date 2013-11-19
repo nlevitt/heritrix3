@@ -1942,5 +1942,4 @@ implements Reporter, Serializable, OverlayContext {
     public boolean hasContentDigestHistory() {
         return getData().get(A_CONTENT_DIGEST_HISTORY) != null;
     }
-
 }
