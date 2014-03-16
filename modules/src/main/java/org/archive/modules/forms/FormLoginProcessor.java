@@ -26,9 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.lang.StringUtils;
 import org.archive.checkpointing.Checkpointable;
@@ -44,6 +41,9 @@ import org.archive.util.JSONUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 
 /**
  * A step, post-ExtractorHTMLForms, where a followup CrawlURI to 
@@ -117,11 +117,11 @@ public class FormLoginProcessor extends Processor implements Checkpointable {
     private static final long serialVersionUID = -1L;
     private static final Logger logger =
         Logger.getLogger(FormLoginProcessor.class.getName());
-    
+
     // formProvince (String) -> count
     ConcurrentMap<String, AtomicLong> eligibleFormsSeenCount =
             CacheBuilder.newBuilder()
-                .build(
+                .<String, AtomicLong>build(
                     new CacheLoader<String, AtomicLong>() {
                         public AtomicLong load(String arg0) {
                             return new AtomicLong(0L);
@@ -131,7 +131,7 @@ public class FormLoginProcessor extends Processor implements Checkpointable {
     // formProvince (String) -> count
     ConcurrentMap<String, AtomicLong> eligibleFormsAttemptsCount =
             CacheBuilder.newBuilder()
-                    .build(
+                    .<String, AtomicLong>build(
                             new CacheLoader<String, AtomicLong>() {
                                 public AtomicLong load(String arg0) {
                                     return new AtomicLong(0L);

@@ -43,7 +43,11 @@ public class ObjectIdentityBdbManualCacheTest extends TmpDirTestCase {
         org.archive.util.FileUtils.ensureWriteableDirectory(envDir);
         env = EnhancedEnvironment.getTestEnvironment(envDir); 
         this.cache = new ObjectIdentityBdbManualCache<IdentityCacheableWrapper<HashMap<String,String>>>();
-        this.cache.initialize(env,"setUpCache",IdentityCacheableWrapper.class, env.getClassCatalog());
+        
+        // http://stackoverflow.com/questions/1079279/class-object-of-generic-class-java
+        @SuppressWarnings("unchecked")
+        Class<IdentityCacheableWrapper<HashMap<String,String>>> clazz = (Class<IdentityCacheableWrapper<HashMap<String,String>>>)(Class<?>)IdentityCacheableWrapper.class; 
+        this.cache.initialize(env, "setUpCache", clazz, env.getClassCatalog());
     }
     
     protected void tearDown() throws Exception {
@@ -53,15 +57,14 @@ public class ObjectIdentityBdbManualCacheTest extends TmpDirTestCase {
         FileUtils.deleteDirectory(envDir);
         super.tearDown();
     }
-    
-    @SuppressWarnings("unchecked")
+
     public void testReadConsistencyUnderLoad() throws Exception {
         final ObjectIdentityBdbManualCache<IdentityCacheableWrapper<AtomicInteger>> cbdbmap = 
-            new ObjectIdentityBdbManualCache();
-        cbdbmap.initialize(env, 
-                    "consistencyCache",
-                    IdentityCacheableWrapper.class,
-                    env.getClassCatalog());
+                new ObjectIdentityBdbManualCache<IdentityCacheableWrapper<AtomicInteger>>();
+        // http://stackoverflow.com/questions/1079279/class-object-of-generic-class-java
+        @SuppressWarnings("unchecked")
+        Class<IdentityCacheableWrapper<AtomicInteger>> clazz = (Class<IdentityCacheableWrapper<AtomicInteger>>)(Class<?>)IdentityCacheableWrapper.class;
+        cbdbmap.initialize(env, "consistencyCache", clazz, env.getClassCatalog());
         try {
             final AtomicInteger level = new AtomicInteger(0);
             final int keyCount = 128 * 1024; // 128K  keys

@@ -390,7 +390,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
      * @throws DatabaseException
      */
     public <V extends IdentityCacheable> ObjectIdentityBdbManualCache<V> getOIBCCache(String dbName, boolean recycle,
-            Class<? extends V> valueClass) 
+            Class<V> valueClass)
     throws DatabaseException {
         if (!recycle) {
             try {
@@ -400,6 +400,7 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
             }
         }
         ObjectIdentityBdbManualCache<V> oic = new ObjectIdentityBdbManualCache<V>();
+
         oic.initialize(bdbEnvironment, dbName, valueClass, classCatalog);
         oiCaches.put(dbName, oic);
         return oic;
@@ -425,14 +426,14 @@ public class BdbModule implements Lifecycle, Checkpointable, Closeable, Disposab
      * @throws DatabaseException
      */
     public <V extends IdentityCacheable> ObjectIdentityCache<V> getObjectCache(String dbName, boolean recycle,
-            Class<V> declaredClass, Class<? extends V> valueClass) 
+            Class<V> declaredClass, Class<? extends V> valueClass)
     throws DatabaseException {
         @SuppressWarnings("unchecked")
         ObjectIdentityCache<V> oic = oiCaches.get(dbName);
         if(oic!=null) {
             return oic; 
         }
-        oic =  getOIBCCache(dbName, recycle, valueClass);
+        oic =  getOIBCCache(dbName, recycle, declaredClass);
         return oic; 
     }
     

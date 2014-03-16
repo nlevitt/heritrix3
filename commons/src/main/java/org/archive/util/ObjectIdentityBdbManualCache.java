@@ -23,8 +23,8 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,7 +65,6 @@ import com.sleepycat.je.Environment;
  * @author paul baclace (conversion to ConcurrentMap)
  *  
  */
-@SuppressWarnings("ALL")
 public class ObjectIdentityBdbManualCache<V extends IdentityCacheable>
 implements ObjectIdentityCache<V>, Closeable, Serializable {
     private static final long serialVersionUID = 1L;
@@ -139,7 +138,7 @@ implements ObjectIdentityCache<V>, Closeable, Serializable {
      * @throws DatabaseException
      */
     public void initialize(final Environment env, String dbName,
-            final Class valueClass, final StoredClassCatalog classCatalog)
+            final Class<V> valueClass, final StoredClassCatalog classCatalog)
     throws DatabaseException {
         // TODO: tune capacity for actual threads, expected size of key caches?
         this.memMap = CacheBuilder.newBuilder()
@@ -156,19 +155,12 @@ implements ObjectIdentityCache<V>, Closeable, Serializable {
         this.count = new AtomicLong(diskMap.size());
     }
 
-    @SuppressWarnings("unchecked")
     protected StoredSortedMap<String, V> createDiskMap(Database database,
-            StoredClassCatalog classCatalog, Class valueClass) {
-        EntryBinding keyBinding = TupleBinding.getPrimitiveBinding(String.class);
-        EntryBinding valueBinding = TupleBinding.getPrimitiveBinding(valueClass);
+            StoredClassCatalog classCatalog, Class<V> valueClass) {
+        EntryBinding<String> keyBinding = TupleBinding.getPrimitiveBinding(String.class);
+        EntryBinding<V> valueBinding = TupleBinding.getPrimitiveBinding(valueClass);
         if(valueBinding == null) {
-            valueBinding = 
-                new KryoBinding<V>(valueClass);
-//                new SerialBinding(classCatalog, valueClass);
-//                new BenchmarkingBinding<V>(new EntryBinding[] {
-//                      new KryoBinding<V>(valueClass),                   
-//                      new RecyclingSerialBinding<V>(classCatalog, valueClass),
-//                  }, valueClass);
+            valueBinding = new KryoBinding<V>(valueClass);
         }
         return new StoredSortedMap<String,V>(database, keyBinding, valueBinding, true);
     }
