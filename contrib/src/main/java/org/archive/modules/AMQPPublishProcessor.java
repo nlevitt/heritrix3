@@ -24,6 +24,7 @@ import static org.archive.modules.CoreAttributeConstants.A_HERITABLE_KEYS;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.httpclient.URIException;
@@ -63,6 +64,18 @@ public class AMQPPublishProcessor extends AMQPProducerProcessor implements Seria
         this.clientId = clientId;
     }
 
+    protected Map<String,Object> extraProperties;
+    public Map<String, Object> getExtraProperties() {
+        return extraProperties;
+    }
+    /**
+     * More stuff to include in the json message sent via amqp. What the
+     * consumer of the messages does with this info is not specified here.
+     */
+    public void setExtraProperties(Map<String, Object> extraProperties) {
+        this.extraProperties = extraProperties;
+    }
+
     /**
      * @return true iff url is http or https, is not robots.txt, was not
      *         received via AMQP
@@ -92,6 +105,10 @@ public class AMQPPublishProcessor extends AMQPProducerProcessor implements Seria
 
         if (getClientId() != null) {
             message.put("clientId", getClientId());
+        }
+
+        if (getExtraProperties() != null) {
+            message.put("extraProperties", getExtraProperties());
         }
 
         HashMap<String, Object> metadata = new HashMap<String,Object>();
